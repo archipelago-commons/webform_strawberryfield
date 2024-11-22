@@ -1,6 +1,7 @@
 webform_strawberryfield.metadataauth.autocomplete:
   js:
     js/metadataauth-webform_strawberryfield.js: {}
+    https://cdn.jsdelivr.net/npm/modernizr@3.13.1/lib/cli.min.js : { external: true, minified: true, preprocess: false}
   dependencies:
     - core/drupal.autocomplete
     - core/once
