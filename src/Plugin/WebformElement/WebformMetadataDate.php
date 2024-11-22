@@ -8,6 +8,7 @@
 
 namespace Drupal\webform_strawberryfield\Plugin\WebformElement;
 
+use _PHPStan_4f7beffdf\Nette\Utils\Paginator;
 use Drupal\webform\WebformSubmissionInterface;
 use Drupal\webform\Plugin\WebformElement\Date;
 use Drupal\webform\Plugin\WebformElement\TextBase;
@@ -59,6 +60,7 @@ class WebformMetadataDate extends MetadataDateBase {
         'size' => '',
         'input_hide' => FALSE,
         'edtf_validateme' => FALSE,
+        'edtf_only' => FALSE,
       ] + parent::defineDefaultProperties()
       + $this->defineDefaultMultipleProperties();
   }
@@ -123,14 +125,27 @@ class WebformMetadataDate extends MetadataDateBase {
     ];
     $form['date']['edtf_validateme'] = [
       '#type' => 'checkbox',
-      '#title' => $this->t('Validate freeform date as EDTF'),
+      '#title' => $this->t('Validate freeform input date as EDTF'),
       '#description' => $this->t(
-        'Option to validate the freeform date as extended date/time format date (EDTF). See <a href="https://www.loc.gov/standards/datetime/">here</a>'
+        'Option to validate the freeform date as extended date/time format date (EDTF). See <a href="https://www.loc.gov/standards/datetime/">here</a>. This will also set the "date_type" subprorpertu value to <em>date_edtf</em>'
       ),
       '#return_value' => TRUE,
       '#states' => [
         'visible' => [
           ':input[name="properties[showfreeformalways]"]' => ['checked' => TRUE],
+        ],
+      ],
+    ];
+    $form['date']['edtf_only'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Only accept date as EDTF'),
+      '#description' => $this->t(
+        'This will hide any other input method/type'
+      ),
+      '#return_value' => TRUE,
+      '#states' => [
+        'visible' => [
+          ':input[name="properties[edtf_validateme]"]' => ['checked' => TRUE],
         ],
       ],
     ];
@@ -140,6 +155,11 @@ class WebformMetadataDate extends MetadataDateBase {
       '#description' => $this->t(
         'If checked, the HTML5 date element will be replaced with a <a href="https://jqueryui.com/datepicker/">jQuery UI datepicker</a>'
       ),
+      '#states' => [
+        'visible' => [
+          ':input[name="properties[edtf_only]"]' => ['checked' => FALSE],
+        ],
+      ],
       '#return_value' => TRUE,
     ];
     $form['date']['datepicker_button'] = [
@@ -151,7 +171,9 @@ class WebformMetadataDate extends MetadataDateBase {
       '#return_value' => TRUE,
       '#states' => [
         'visible' => [
-          ':input[name="properties[datepicker]"]' => ['checked' => TRUE],
+          [':input[name="properties[datepicker]"]' => ['checked' => TRUE]],
+          'and',
+          [':input[name="properties[edtf_only]"]' => ['checked' => FALSE]],
         ],
       ],
     ];
@@ -190,7 +212,8 @@ class WebformMetadataDate extends MetadataDateBase {
       ),
       '#states' => [
         'visible' => [
-          ':input[name="properties[datepicker]"]' => ['checked' => TRUE],
+          [':input[name="properties[datepicker]"]' => ['checked' => TRUE]],
+          [':input[name="properties[edtf_only]"]' => ['checked' => FALSE]],
         ],
       ],
     ];
@@ -202,7 +225,8 @@ class WebformMetadataDate extends MetadataDateBase {
       '#size' => 4,
       '#states' => [
         'invisible' => [
-          ':input[name="properties[datepicker]"]' => ['checked' => TRUE],
+          [':input[name="properties[datepicker]"]' => ['checked' => TRUE]],
+          [':input[name="properties[edtf_only]"]' => ['checked' => FALSE]],
         ],
       ],
     ];
@@ -277,20 +301,39 @@ class WebformMetadataDate extends MetadataDateBase {
 
     $lines = [];
 
-    $date_types = [
-      'date_point' => 'Point Date',
-      'date_range' => 'Date Range',
-      'date_free' => 'Freeform Date',
-    ];
+
     $type = 'date_free';
     if (!empty($value['date_type'])) {
       $type = isset($date_types[$value['date_type']]) ? $value['date_type'] : $type;
     }
+    if ($type !== 'date_edtf') {
+      $date_types = [
+        'date_point' => 'Point Date',
+        'date_range' => 'Date Range',
+        'date_free' => 'Freeform Date',
+        'date_etdf' => 'Date EDTF',
+      ];
+    }
+    else {
+      $date_types = [
+        'date_etdf' => 'Date EDTF',
+      ];
+    }
+
+
+
     $lines[] = "Date type:". $date_types[$type];
     switch ($type) {
       case 'date_free':
         if (!empty($value['date_free'])) {
           $lines[] = $value['date_free'];
+        } else {
+          $lines[] = 'Not Set';
+        }
+        break;
+      case 'date_etdf':
+        if (!empty($value['date_etdf'])) {
+          $lines[] = $value['date_etdf'];
         } else {
           $lines[] = 'Not Set';
         }
@@ -359,6 +402,7 @@ class WebformMetadataDate extends MetadataDateBase {
         $newvalue = $value;
       }
     }
+    error_log(print_r($newvalue, true));
     $webform_submission->setElementData($key,$newvalue);
   }
 }
