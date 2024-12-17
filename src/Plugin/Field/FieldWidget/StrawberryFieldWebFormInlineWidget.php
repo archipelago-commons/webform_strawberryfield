@@ -397,6 +397,7 @@ class StrawberryFieldWebFormInlineWidget extends WidgetBase implements Container
       // we need to re-write data (take the first) to avoid a Render array error in Drupal 10.3
       // But also tell the user this form is not safe to use.
       $error_elements_why = [];
+      $error_elements = $this->errorElements ?? [];
       if (is_array($elements_in_data) && count($elements_in_data) > 0) {
         $error_elements = StrawberryRunnerModalController::validateDataAgainstWebformElements($elements_in_data, $data, $error_elements_why);
       }
@@ -482,7 +483,7 @@ class StrawberryFieldWebFormInlineWidget extends WidgetBase implements Container
       ];
     }
 
-    if (count($this->errorElements)) {
+    if (count($this->errorElements ?? [])) {
       $build = [
         'message' => [
           '#type' => 'markup',
