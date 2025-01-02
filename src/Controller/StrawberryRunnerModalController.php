@@ -386,12 +386,18 @@ class StrawberryRunnerModalController extends ControllerBase {
         // Not a multiple element. So check what we are getting here.
         if (is_array($data['data'][$key]) && !empty($data['data'][$key])) {
           if (array_is_list($data['data'][$key])) {
-            // Multiple entries for a single valued element. Bad.
-            $error_elements_why[$key] = t('@key contains multiple values but <em>@element_name</em> is configured for a single one' , [
-              '@key' => $key,
-              '@element_name' => $elements_in_datum['#title'] ?? $key,
-            ]);
-            $error_elements[$key] = $data['data'][$key];
+            // Make an exception for "one" count and "entity_autocomplete"
+            if ($elements_in_datum['#webform_plugin_id'] == "entity_autocomplete" && count($data['data'][$key]) == 1) {
+              // Do nothing. We accept this bc the element actually can load a single entry array.
+            }
+            else {
+              // Multiple entries for a single valued element. Bad.
+              $error_elements_why[$key] = t('@key contains multiple values but <em>@element_name</em> is configured for a single one', [
+                '@key' => $key,
+                '@element_name' => $elements_in_datum['#title'] ?? $key,
+              ]);
+              $error_elements[$key] = $data['data'][$key];
+            }
           }
           else {
             // The data is an object.
