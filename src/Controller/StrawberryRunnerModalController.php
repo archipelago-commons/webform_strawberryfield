@@ -22,8 +22,7 @@ use Ramsey\Uuid\Uuid;
 /**
  * StrawberryRunnerModalController class.
  */
-class StrawberryRunnerModalController extends ControllerBase
-{
+class StrawberryRunnerModalController extends ControllerBase {
 
   /**
    * Callback for opening the modal form.
@@ -171,23 +170,27 @@ class StrawberryRunnerModalController extends ControllerBase
         }
       }
       $data['data'] = $data_defaults + json_decode($stored_value,true);
+      /* @var \Drupal\webform\WebformInterface $webform */
+      $webform_elements  = $webform->getElementsInitializedFlattenedAndHasValue();
+      $webform_elements_clean = $webform->getElementsDecodedAndFlattened();
+      $elements_in_data = array_intersect_key($webform_elements, $data['data']);
       // In case the saved data is "single valued" for a key
       // But the corresponding webform element is not
       // we cast to it multi valued so it can be read/updated
-      /* @var \Drupal\webform\WebformInterface $webform */
-      $webform_elements  = $webform->getElementsInitializedFlattenedAndHasValue();
-      $elements_in_data = array_intersect_key($webform_elements, $data['data']);
-      if (is_array($elements_in_data) && count($elements_in_data)>0) {
-        foreach($elements_in_data as $key => $elements_in_datum) {
-          if (isset($elements_in_datum['#webform_multiple']) &&
-            $elements_in_datum['#webform_multiple']!== FALSE) {
-            $data['data'][$key] = (array) $data['data'][$key];
-            if (!array_is_list($data['data'][$key])) {
-              $data['data'][$key] = [ $data['data'][$key] ];
-            }
-          }
-        }
+      // If the element itself does not allow multiple, is not a composite and we are passing an indexed array
+      // we need to re-write data (take the first) to avoid a Render array error in Drupal 10.3
+      // But also tell the user this form is not safe to use.
+      if (is_array($elements_in_data) && count($elements_in_data) > 0) {
+        $error_elements_why = [];
+        $error_elements = StrawberryRunnerModalController::validateDataAgainstWebformElements($elements_in_data, $data, $error_elements_why);
       }
+      foreach ($error_elements as $key => $value) {
+        $element = $webform_elements_clean[$key];
+        $element['#disabled'] = TRUE;
+        $element['#required'] = FALSE;
+        $webform->setElementProperties($key, $element);
+      }
+      $data['data']['strawberry_field_invalid_elements'] = $error_elements;
     }
 
     $confirmation_message = $webform->getSetting('confirmation_message', FALSE);
@@ -198,8 +201,6 @@ class StrawberryRunnerModalController extends ControllerBase
     // And also we need to reset some defaults here
     // @see \Drupal\webform\Entity\Webform::getDefaultSettings
     // @TODO autofill needs to be a setting that is respected
-    // But Kerri thought this could get in our way
-    // Need to thing about this.
     // @TODO research option of using WebformInterface::CONFIRMATION_NONE
     // @SEE https://www.drupal.org/node/2996780
     // Does not work right now.
@@ -320,6 +321,105 @@ class StrawberryRunnerModalController extends ControllerBase
     return $response;
 
 
+  }
+
+  /**
+   * @param $elements_in_data
+   *    The Flattened Elements that intersect keys present in data.
+   * @param $data
+   *    The JSON data as an Array coming from an ADO
+   * @return array
+   *    Empty if no errors, if not associative array with keys of elements that are not compatible with data
+   *    holding the original data so we can restore it on persistence (when saving).
+   */
+  public static function validateDataAgainstWebformElements(array $elements_in_data, array &$data, array &$error_elements_why): array {
+    // In case the saved data is "single valued" for a key
+    // But the corresponding webform element is not
+    // we cast to it multi valued so it can be read/updated
+    // If the element itself does not allow multiple, is not a composite and we are passing an indexed array
+    // we need to re-write data (take the first) to avoid a Render array error in Drupal 10.3
+    // But also tell the user this form is not safe to use.
+    $error_elements = [];
+    foreach ($elements_in_data as $key => $elements_in_datum) {
+      if (isset($elements_in_datum['#webform_multiple']) &&
+        $elements_in_datum['#webform_multiple'] !== FALSE) {
+        //@TODO should we log this operation for admins?
+        $data['data'][$key] = (array) $data['data'][$key];
+        if (!array_is_list($data['data'][$key])) {
+          // means we just made a composite element a composite element! So make it a list
+          // And check also if the Source can be read/edited by the form element.
+          if ($elements_in_datum['#webform_composite_elements'] ?? NULL) {
+            $current_source_subkeys = array_keys($data['data'][$key]);
+            $element_subkeys = array_keys($elements_in_datum['#webform_composite_elements']);
+            // OK if element has more/less. Not OK if the source data has other/more.
+            if (count(array_diff($current_source_subkeys, $element_subkeys))) {
+              $diff = array_diff($current_source_subkeys, $element_subkeys);
+              $error_elements_why[$key] = t('@key contains @property not available for <em>@element_name</em>' , [
+                    '@key' => $key,
+                    '@property' => (count($diff) > 1 ? "properties " : "property ") . implode (",", $diff),
+                    '@element_name' => $elements_in_datum['#title'] ?? $key,
+              ]);
+              $error_elements[$key] = $data['data'][$key];
+            }
+            else {
+              $data['data'][$key] = [$data['data'][$key]];
+            }
+          } else {
+            // NO need to count here since this was originally an Object already.
+            $data['data'][$key] = [$data['data'][$key]];
+          }
+        }
+        else {
+          // count the values. The Element count might be lower than the source data
+          if (count($data['data'][$key]) > (int) $elements_in_datum['#webform_multiple']) {
+            $error_elements_why[$key] = t('@key contains @count which is larger than the multiple values limit of @max for <em>@element_name</em>' , [
+              '@key' => $key,
+              '@count' => count($data['data'][$key]) . " entries ",
+              '@max' => (int) $elements_in_datum['#webform_multiple'],
+              '@element_name' => $elements_in_datum['#title'] ?? $key,
+            ]);
+            $error_elements[$key] = $data['data'][$key];
+          }
+        }
+      }
+      else {
+        // Not a multiple element. So check what we are getting here.
+        if (is_array($data['data'][$key]) && !empty($data['data'][$key])) {
+          if (array_is_list($data['data'][$key])) {
+            // Make an exception for "one" count and "entity_autocomplete"
+            if ($elements_in_datum['#webform_plugin_id'] == "entity_autocomplete" && count($data['data'][$key]) == 1) {
+              // Do nothing. We accept this bc the element actually can load a single entry array.
+            }
+            else {
+              // Multiple entries for a single valued element. Bad.
+              $error_elements_why[$key] = t('@key contains multiple values but <em>@element_name</em> is configured for a single one', [
+                '@key' => $key,
+                '@element_name' => $elements_in_datum['#title'] ?? $key,
+              ]);
+              $error_elements[$key] = $data['data'][$key];
+            }
+          }
+          else {
+            // The data is an object.
+            if ($elements_in_datum['#webform_composite_elements'] ?? NULL) {
+              $current_source_subkeys = array_keys($data['data'][$key]);
+              $element_subkeys = array_keys($elements_in_datum['#webform_composite_elements']);
+              // OK if element has more/less. Not OK if the source data has other/more.
+              if (count(array_diff($current_source_subkeys, $element_subkeys))) {
+                $diff = array_diff($current_source_subkeys, $element_subkeys);
+                $error_elements_why[$key] = t('@key contains @property not available for <em>@element_name</em>' , [
+                  '@key' => $key,
+                  '@property' => (count($diff) > 1 ? "properties " : "property ") . implode (",", $diff),
+                  '@element_name' => $elements_in_datum['#title'] ?? $key,
+                ]);
+                $error_elements[$key] = $data['data'][$key];
+              }
+            }
+          }
+        }
+      }
+    }
+    return $error_elements;
   }
 
 

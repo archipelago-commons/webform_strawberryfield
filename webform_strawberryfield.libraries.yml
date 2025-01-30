@@ -39,6 +39,7 @@ scenebuilder_pannellum_strawberry:
 webform_strawberryfield.element.metadatadate:
   version: VERSION
   js:
+    js/modernizr-custom.js : {minified: true}
     js/webform_strawberryfield.element.metadatadate.js: {}
   dependencies:
     - jquery_ui_datepicker/datepicker
