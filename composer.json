@@ -19,6 +19,7 @@
         "strawberryfield/format_strawberryfield":"1.4.0.x-dev",
         "drupal/jquery_ui_datepicker": "^2.0",
         "drupal/webform": "^6.2",
-        "ramsey/uuid": "^4"
+        "ramsey/uuid": "^4",
+        "ankitpokhrel/tus-php": "^2"
     }
 }
