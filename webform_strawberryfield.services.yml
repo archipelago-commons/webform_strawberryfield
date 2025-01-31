@@ -4,3 +4,10 @@ services:
     tags:
       - {name: event_subscriber}
     arguments: ['@string_translation', '@messenger', '@logger.factory', '@tempstore.private']
+  webform_strawberryfield.tus.cache:
+    class: Drupal\webform_strawberryfield\WebformStrawberryTusCacheService
+    arguments: ['@database', '@tempstore.shared']
+  webform_strawberryfield.tus.server:
+    class: Drupal\webform_strawberryfield\WebformStrawberryTusServerService
+    arguments: ['@token', '@file.usage', '@entity_type.manager', '@file_system', '@config.factory', '@current_user', '@event_dispatcher', '@webform_strawberryfield.tus.cache']
+

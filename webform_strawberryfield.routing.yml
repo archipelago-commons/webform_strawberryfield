@@ -106,7 +106,7 @@ webform_strawberryfield.tus.upload_complete:
   requirements:
     _format: 'json'
     _entity_access: 'webform.submission_create'
-    _custom_access: '\Drupal\webform_strawberryfield\Access\TusUploadAccess'
+    _custom_access: '\Drupal\webform_strawberryfield\Access\TusUploadAccess:checkAccess'
     _csrf_token: 'TRUE'
     uuid: '[a-zA-Z0-9\-]+'
   options:
