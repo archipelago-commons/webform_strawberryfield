@@ -46,3 +46,14 @@ webform_strawberryfield.element.metadatadate:
     - core/drupalSettings
     - core/once
 
+webform_strawberryfield.tus:
+  js:
+    https://cdn.jsdelivr.net/npm/tus-js-client@latest/dist/tus.min.js: { external: true, minified: true, preprocess: false}
+
+webform_strawberryfield.tus_integration:
+  js:
+    js/webform_strawberryfield-tus.js
+  dependencies:
+    - core/drupalSettings
+    - core/once
+    - webform_strawberryfield/webform_strawberryfield.tus

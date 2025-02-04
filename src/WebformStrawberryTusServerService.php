@@ -124,12 +124,6 @@ class WebformStrawberryTusServerService {
       $upload_key = $server->getUploadKey();
     }
 
-    // Get the file destination. WE NEE TO MOVE THIS TO THE CONTROLLER.
-    // THAT IS WHERE WE HAVE INFO ABOUT THE WEBFORM/KEY.
-    $destination = $this->determineDestination($upload_key, $post_data);
-    // Set the upload directory for TUS.
-    $server->setUploadDir($destination);
-
     return $server;
   }
 
@@ -153,10 +147,6 @@ class WebformStrawberryTusServerService {
     $server = new Server($this->tusCacheService);
     $server->setApiPath($route_path);
 
-    // Get the file destination. WE NEE TO MOVE THIS TO THE CONTROLLER.
-    // THAT IS WHERE WE HAVE INFO ABOUT THE WEBFORM/KEY.
-    $server->setMaxUploadSize((int) 100 * 1048576);
-
     if ($upload_key) {
       $server->setUploadKey($upload_key);
     }
@@ -177,17 +167,6 @@ class WebformStrawberryTusServerService {
     $file_name = $tus_file->getName();
     $file_path = $tus_file->getFilePath();
     $metadata = $tus_file->details()['metadata'];
-
-    // MIGHT WANT TO MOVE THIS TO THE CONTROLLER. OR PASS IN THE EVENT THE WEBFORM
-    // WHICH MEANS THE CALLER TO getServer might need to call it with the element info resolved.
-    // OR THE WEBFORM ENTITY ITSELF AND THE KEY.
-    // CHECK THE WEBFORM UPLOAD CODE THAT DOES THOSE CALCULATIONS.
-    $allowed_extensions = $field_definition->getSettings()['file_extensions'];
-    $regex = '/\.(' . preg_replace('/ +/', '|', preg_quote($allowed_extensions)) . ')$/i';
-    if (!preg_match($regex, $metadata['filename'])) {
-      throw new UnprocessableEntityHttpException(sprintf('Only files with the following extensions are allowed: %s.', $allowed_extensions));
-    }
-
     // Check if the file already exists.
     $file_query = $this->entityTypeManager->getStorage('file')->getQuery();
     $file_query->condition('uri', $file_path);
@@ -197,7 +176,7 @@ class WebformStrawberryTusServerService {
     if (!empty($results)) {
       // File already exists, just add usage.
       $file = reset($results);
-      $this->fileUsage->add($file, 'tus', 'file', $file->id());
+      $this->fileUsage->add($file, 'webform_strawberryfield', 'file', $file->id());
       return;
     }
 
@@ -211,7 +190,7 @@ class WebformStrawberryTusServerService {
     ]);
     $file->save();
     // NOT SURE ABOUT THIS...
-    $this->fileUsage->add($file, 'tus', 'file', $file->id());
+    $this->fileUsage->add($file, 'webform_strawberryfield', 'file', $file->id());
 
     // Dispatch an event for other modules to act on.
     $event = new WebformStrawberryFieldTusUploadedEvent($file);
