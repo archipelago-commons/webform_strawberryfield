@@ -4,6 +4,9 @@ webform_strawberryfield.settings:
     europeana_entity_apikey:
       type: string
       label: 'Europeana Entity API Secret key'
+    tus_upload_path:
+      type: string
+      label: 'Where TUS whould be uploading chunked files'
 field.widget.settings.strawberryfield_webform_inline_widget:
   type: config_object
   label: 'Webform Inline Widget Schema'
