@@ -98,7 +98,7 @@ webform_strawberryfield.tus.upload:
     _csrf_token: 'TRUE'
 
 webform_strawberryfield.tus.upload_complete:
-  path: '/webform_strawberry/tus_upload/{webform}/{key}/{uuid}'
+  path: '/webform_strawberry/tus_upload_complete/{webform}/{key}/{uuid}'
   defaults:
     _controller: '\Drupal\webform_strawberryfield\Controller\TusController::uploadToWebformComplete'
     _title: 'Tus Upload complete'

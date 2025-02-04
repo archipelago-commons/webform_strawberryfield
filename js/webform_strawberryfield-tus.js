@@ -3,7 +3,7 @@
  * Override polyfill for HTML5 date input and provide support for custom date formats.
  */
 
-(function (once, Drupa, tus) {
+(function (once, Drupa, tus, drupalSettings) {
 
   'use strict';
 
@@ -34,9 +34,11 @@
           const progressBar = progress.querySelector('.bar')
           const alertBox = document.querySelector('#support-alert')
           const uploadList = document.querySelector('#upload-list')
-          const chunkInput = document.querySelector('#chunksize')
-          const parallelInput = document.querySelector('#paralleluploads')
-          const endpointInput = document.querySelector('#endpoint')
+          // Only for testing/dev! this varies between forms/key elements and will be set
+          // by the webform element via settings.
+          const chunkSizeConfig = 512;
+          const parallelCountConfog= 2;
+          const endpoint = drupalSettings.path.baseUrl + 'webform_strawberry/tus_upload/descriptive_metadata/tus/'
 
           function reset() {
             input.value = ''
@@ -72,13 +74,12 @@
               return
             }
 
-            const endpoint = endpointInput.value
-            let chunkSize = Number.parseInt(chunkInput.value, 10)
+            let chunkSize = Number.parseInt(chunkSizeConfig, 10)
             if (Number.isNaN(chunkSize)) {
               chunkSize = Number.POSITIVE_INFINITY
             }
 
-            let parallelUploads = Number.parseInt(parallelInput.value, 10)
+            let parallelUploads = Number.parseInt(parallelCountConfig, 10)
             if (Number.isNaN(parallelUploads)) {
               parallelUploads = 1
             }
@@ -118,6 +119,22 @@
                 anchor.href = upload.url
                 anchor.className = 'btn btn-success'
                 uploadList.appendChild(anchor)
+                var uploadKey = upload.url.split('/').slice(-1).pop();
+                var ajax_settings = {
+                  type: 'POST',
+                  contentType: 'application/json;charset=utf-8',
+                  dataType: 'json',
+                  processData: false,
+                  data: JSON.stringify({fileName: resp.file.name}),
+                  url: drupalSettings.path.baseUrl + 'webform_strawberry/tus_upload_complete/descriptive_metadata/tus/' + uploadKey
+                };
+
+                // Send ajax call to inform upload complete, and put value in the field.
+                $.ajax(ajax_settings).done(function(response) {
+                  // TODO this should update the info the Drupal way.
+                  console.log(response.fid);
+                });
+
 
                 reset()
               },
@@ -126,7 +143,6 @@
             upload = new tus.Upload(file, options)
             upload.findPreviousUploads().then((previousUploads) => {
               askToResumeUpload(previousUploads, upload)
-
               upload.start()
               uploadIsRunning = true
             })
@@ -167,4 +183,4 @@
     }
   };
 
-})(once, Drupal, tus);
+})(once, Drupal, tus, drupalSettings);

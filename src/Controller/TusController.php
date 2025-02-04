@@ -110,7 +110,7 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
    * @return \TusPhp\Tus\Server
    *   Tus server ready to receive file upload.
    */
-  public function upload(Request $request, WebformInterface $webform, string $key, string $uuid) {
+  public function uploadToWebform(Request $request, WebformInterface $webform, string $key, string $uuid) {
     $meta_values = $this->getMetaValuesFromRequest($request);
     $current_path = $request->getPathInfo();
 
@@ -220,7 +220,7 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
    * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
-  public function uploadComplete(Request $request, WebformInterface $webform, string $key): Response {
+  public function uploadToWebformComplete(Request $request, WebformInterface $webform, string $key): Response {
     $response = [];
     $post_data = $this->serializer->decode($request->getContent(), $this->getRequestFormat($request));
 
