@@ -84,8 +84,9 @@ webform_strawberryfield.tus.upload:
   path: '/webform_strawberry/tus_upload/{webform}/{key}/{uuid}'
   methods: [ GET, POST, PATCH, HEAD, OPTIONS, DELETE ]
   defaults:
-    _controller: '\Drupal\webform_strawberryfield\Controller\TusController::uploadToWebform'
+    _controller: '\Drupal\webform_strawberryfield\Controller\TusServerController::uploadToWebform'
     _title: 'Tus Upload'
+    uuid: ''
   options:
     parameters:
       webform:
@@ -94,13 +95,13 @@ webform_strawberryfield.tus.upload:
   requirements:
     uuid: '[a-zA-Z0-9\-]+'
     _entity_access: 'webform.submission_create'
-    _custom_access: '\Drupal\webform_strawberryfield\Access\TusUploadAccess'
+    _custom_access: 'Drupal\webform_strawberryfield\Access\TusUploadAccess:checkAccess'
     _csrf_token: 'TRUE'
 
 webform_strawberryfield.tus.upload_complete:
   path: '/webform_strawberry/tus_upload_complete/{webform}/{key}/{uuid}'
   defaults:
-    _controller: '\Drupal\webform_strawberryfield\Controller\TusController::uploadToWebformComplete'
+    _controller: '\Drupal\webform_strawberryfield\Controller\TusServerController::uploadToWebformComplete'
     _title: 'Tus Upload complete'
   methods: [POST]
   requirements:

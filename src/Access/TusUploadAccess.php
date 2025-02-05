@@ -24,7 +24,7 @@ class TusUploadAccess {
    * @return \Drupal\Core\Access\AccessResultInterface
    *   The access result.
    */
-  public static function checkAccess(WebformInterface $webform, string $key, AccountInterface $account) {
+  public function checkAccess(WebformInterface $webform, string $key, AccountInterface $account) {
     $possible_upload_element = $webform->getElement($key);
     $all_upload_elements = $webform->getElementsManagedFiles();
     $access_result = AccessResult::allowed();
