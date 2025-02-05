@@ -182,7 +182,7 @@ class WebformTusFile extends WebformManagedFileBase {
     // @TODO. This element should skip anonymous users at all. We should default to the standard upload
     // Element.
 		$url = Url::fromRoute('webform_strawberryfield.tus.upload', ['webform' => $element['#webform'],'key' => $element['#webform_key']],  ['absolute' => TRUE]);
-		$token = \Drupal::csrfToken()->get($url->getInternalPath());
+		$token = \Drupal::csrfToken()->get(\Drupal\Core\Access\CsrfRequestHeaderAccessCheck::TOKEN_KEY);
 
 		$element['#attached']['drupalSettings']['webform_strawberryfield']['tus'][$element['#webform_key']]['url'] =  $url->toString();
     $element['#attached']['drupalSettings']['webform_strawberryfield']['tus'][$element['#webform_key']]['X-CSRF-Token'] = $token;

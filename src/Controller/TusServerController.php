@@ -54,15 +54,20 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
    */
   protected $serializerFormats = [];
 
+  /**
+   * @var \Drupal\Core\File\FileSystemInterface
+   */
+  private FileSystemInterface $fileSystem;
 
   /**
    * Constructs a new TusController object.
    */
-  public function __construct(WebformStrawberryTusServerService $tus_server, Serializer $serializer, array $serializer_formats, WebformElementManagerInterface $webformManager) {
+  public function __construct(WebformStrawberryTusServerService $tus_server, Serializer $serializer, array $serializer_formats, WebformElementManagerInterface $webformManager, FileSystemInterface $filesystem) {
     $this->tusServerService = $tus_server;
     $this->serializer = $serializer;
     $this->serializerFormats = $serializer_formats;
     $this->webformElementManager = $webformManager;
+    $this->fileSystem = $filesystem;
   }
 
 
@@ -84,7 +89,8 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
       $container->get( 'webform_strawberryfield.tus.server'),
       $serializer,
       $formats,
-      $container->get('plugin.manager.webform.element')
+      $container->get('plugin.manager.webform.element'),
+      $container->get('file_system')
     );
   }
 
