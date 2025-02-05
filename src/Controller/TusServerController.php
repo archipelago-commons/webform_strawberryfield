@@ -144,7 +144,7 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
       $server->setUploadDir($destination);
       // Get the file destination. WE NEE TO MOVE THIS TO THE CONTROLLER.
       // THAT IS WHERE WE HAVE INFO ABOUT THE WEBFORM/KEY.
-      $server->setMaxUploadSize((int) 100 * 1048576);
+      $server->setMaxUploadSize((int) 10000 * 1048576);
       return $server->serve();
     }
     else {

@@ -27,6 +27,7 @@
         ($managed_file_wrapper) => {
           $managed_file_wrapper.querySelectorAll('input[type="file"]').forEach(
             ($input) => {
+
               let upload = null
               let uploadIsRunning = false
               const toggleBtn = $managed_file_wrapper.querySelector('.tus-btn')
@@ -39,8 +40,9 @@
               const webformkey = $managed_file_wrapper.querySelector('input[type="hidden"]').name.replace('[fids]','')
               // Only for testing/dev! this varies between forms/key elements and will be set
               // by the webform element via settings.
-              const chunkSizeConfig = 512;
-              const parallelCountConfig= 2;
+              // If we set more, the PHP backend (tus-php) won't know how to deal with
+              // the missing metadata (metadataForPartialUploads)
+              const parallelCountConfig= 1;
               const url_string = drupalSettings.webform_strawberryfield.tus[webformkey].url.split('?')[0];
               const token = drupalSettings.webform_strawberryfield.tus[webformkey]["X-CSRF-Token"];
               const endpoint = url_string;
@@ -79,12 +81,7 @@
                 if (!file) {
                   return
                 }
-
-                let chunkSize = Number.parseInt(chunkSizeConfig, 10)
-                if (Number.isNaN(chunkSize)) {
-                  chunkSize = Number.POSITIVE_INFINITY
-                }
-
+                // We can't use it until TUS-PHP supports this.
                 let parallelUploads = Number.parseInt(parallelCountConfig, 10)
                 if (Number.isNaN(parallelUploads)) {
                   parallelUploads = 1
@@ -93,10 +90,8 @@
                 toggleBtn.textContent = 'pause upload'
 
                 const options = {
-                  endpoint,
-                  chunkSize,
+                  endpoint: endpoint,
                   retryDelays: [0, 1000, 3000, 5000],
-                  parallelUploads,
                   headers: token_headers,
                   metadata: {
                     filename: file.name,
