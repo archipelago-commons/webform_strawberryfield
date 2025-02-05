@@ -190,7 +190,7 @@ class WebformTusFile extends WebformManagedFileBase {
 
     // Add managed file upload tracking.
     if ($this->moduleHandler->moduleExists('file')) {
-      $element['#attached']['library'][] = 'webform/webform.element.managed_file';
+      //$element['#attached']['library'][] = 'webform/webform.element.managed_file';
 
     }
   }
