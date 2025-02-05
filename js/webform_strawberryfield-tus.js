@@ -35,11 +35,16 @@
               const progress = $managed_file_wrapper.querySelector('.tus-progress')
               const progressBar = progress.querySelector('.tus-bar')
               const uploadList = $managed_file_wrapper.querySelector('.tus-upload-list')
+              // Really hard to pass even data attributes on webform elements. But this does the trick
+              const webformkey = $managed_file_wrapper.querySelector('input[type="hidden"]').name.replace('[fids]','')
               // Only for testing/dev! this varies between forms/key elements and will be set
               // by the webform element via settings.
               const chunkSizeConfig = 512;
               const parallelCountConfig= 2;
-              const endpoint = drupalSettings.path.baseUrl + 'webform_strawberry/tus_upload/descriptive_metadata/tus/'
+              const url_string = drupalSettings.webform_strawberryfield.tus[webformkey].url.split('?')[0];
+              const token = drupalSettings.webform_strawberryfield.tus[webformkey]["X-CSRF-Token"];
+              const endpoint = url_string;
+              const token_headers = {"X-CSRF-Token": token }
 
               function reset() {
                 input.value = ''
@@ -92,6 +97,7 @@
                   chunkSize,
                   retryDelays: [0, 1000, 3000, 5000],
                   parallelUploads,
+                  headers: token_headers,
                   metadata: {
                     filename: file.name,
                     filetype: file.type,

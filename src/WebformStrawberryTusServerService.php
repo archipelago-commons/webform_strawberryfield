@@ -106,8 +106,8 @@ class WebformStrawberryTusServerService {
   /**
    * {@inheritdoc}
    */
-  public function getServer(string $upload_key = '', array $post_data = [], string $route_path): Server {
-    $server = $this->getTusServer($upload_key, $route_path);
+  public function getServer($route_path, string $upload_key = '', array $post_data = []): Server {
+    $server = $this->getTusServer($route_path, $upload_key);
 
     // These methods won't pass metadata about the file, and don't need
     // file directory, because they are reading from TUS cache, so we
@@ -141,7 +141,7 @@ class WebformStrawberryTusServerService {
    *
    * @throws \ReflectionException
    */
-  protected function getTusServer(string $upload_key = '', string $route_path): Server {
+  protected function getTusServer(string $route_path, string $upload_key = ''): Server {
 
     // Initialize TUS server using our shared temp store cache wrapper.
     $server = new Server($this->tusCacheService);

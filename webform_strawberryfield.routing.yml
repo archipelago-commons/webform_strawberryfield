@@ -96,7 +96,7 @@ webform_strawberryfield.tus.upload:
     uuid: '[a-zA-Z0-9\-]+'
     _entity_access: 'webform.submission_create'
     _custom_access: 'Drupal\webform_strawberryfield\Access\TusUploadAccess:checkAccess'
-    _csrf_token: 'TRUE'
+    _csrf_request_header_token: 'TRUE'
 
 webform_strawberryfield.tus.upload_complete:
   path: '/webform_strawberry/tus_upload_complete/{webform}/{key}/{uuid}'
@@ -108,7 +108,7 @@ webform_strawberryfield.tus.upload_complete:
     _format: 'json'
     _entity_access: 'webform.submission_create'
     _custom_access: '\Drupal\webform_strawberryfield\Access\TusUploadAccess:checkAccess'
-    _csrf_token: 'TRUE'
+    _csrf_request_header_token: 'TRUE'
     uuid: '[a-zA-Z0-9\-]+'
   options:
     no_cache: TRUE

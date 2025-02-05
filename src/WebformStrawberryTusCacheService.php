@@ -4,6 +4,7 @@ namespace Drupal\webform_strawberryfield;
 
 use Drupal\Core\TempStore\PrivateTempStore;
 use Drupal\Core\TempStore\SharedTempStore;
+use Drupal\Core\TempStore\SharedTempStoreFactory;
 use TusPhp\Cache\AbstractCache;
 use Drupal\Core\Database\Connection;
 
@@ -21,8 +22,9 @@ class WebformStrawberryTusCacheService extends AbstractCache {
    */
   private Connection $db;
 
-  public function __construct(SharedTempStore $tempStore, Connection $db) {
-    $this->tempStore = $tempStore;
+
+  public function __construct(SharedTempStoreFactory $tempStoreFactory, Connection $db) {
+    $this->tempStore = $tempStoreFactory->get(static::COLLECTION);
     $this->db = $db;
   }
 

@@ -18,6 +18,7 @@ use Symfony\Component\Serializer\Encoder\JsonEncoder;
 use Symfony\Component\Serializer\Serializer;
 use Drupal\webform_strawberryfield\WebformStrawberryTusServerService;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
+use Drupal\webform\Plugin\WebformElementManagerInterface;
 
 /**
  * Class TusServerController.
@@ -53,6 +54,7 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
    */
   protected $serializerFormats = [];
 
+
   /**
    * Constructs a new TusController object.
    */
@@ -62,6 +64,7 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
     $this->serializerFormats = $serializer_formats;
     $this->webformElementManager = $webformManager;
   }
+
 
   /**
    * {@inheritdoc}
@@ -126,7 +129,7 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
     // UUID is passed on PATCH and other certain calls, or as the
     // header upload-key on others.
     $uuid = $uuid ?? $request->headers->get('upload-key') ?? '';
-    $server = $this->tusServerService->getServer($uuid, $meta_values, $current_path);
+    $server = $this->tusServerService->getServer($current_path, $uuid, $meta_values);
     // Each webform might have a different upload destination/key based on their settings
     // We can't upload to S3 though, so in this case all will go to private?
     // See \Drupal\webform\Plugin\WebformElement\WebformManagedFileBase::getUploadLocation
@@ -139,7 +142,7 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
       return $server->serve();
     }
     else {
-      throw new UnprocessableEntityHttpException(sprintf('Webform element %key can not old your file', $key));
+      throw new UnprocessableEntityHttpException(sprintf('Webform element %s can not hold your file', $key));
     }
   }
 
@@ -150,9 +153,9 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
     $element = $webform_entity->getElementInitialized($key);
     if ($element) {
       $element_plugin = $this->webformElementManager->getElementInstance($element);
-      if ($element_plugin->getPluginId() == 'managed_file') {
+      if ($element_plugin->getPluginId() == 'webform_tus_file') {
       }
-      $upload_location = 'private://webform/' . $webform_entity->id() . '/_sid_';
+      $upload_location = 'private://webform/' . $webform_entity->id() . '/_sid_/'.$this->currentUser()->getAccountName().'/tus/';
       //  If we use a custom element we can set this directly $upload_location = $element['#upload_location'];
       $this->fileSystem->prepareDirectory($upload_location, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
     }
