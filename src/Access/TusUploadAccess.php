@@ -10,7 +10,7 @@ use Drupal\webform\WebformSubmissionInterface;
 use Drupal\webform_strawberryfield\Plugin\WebformHandler\strawberryFieldharvester;
 
 /**
- * Defines the custom access control handler for the webform submission entities.
+ * Defines the custom access control handler for the webform Tus Upload routes.
  */
 class TusUploadAccess {
 

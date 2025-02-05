@@ -6,6 +6,7 @@ use Drupal\Component\Utility\Bytes;
 use Drupal\Component\Utility\Environment;
 use Drupal\webform\WebformSubmissionInterface;
 use Drupal\webform\Plugin\WebformElement\WebformManagedFileBase;
+use Drupal\Core\Url;
 
 /**
  * Provides a 'webform_tus_file' element.
@@ -177,10 +178,20 @@ class WebformTusFile extends WebformManagedFileBase {
     $element['#process'][] = [get_class($this), 'processManagedFile'];
     // Adds TUS JS.
     $element['#attached']['library'][] = 'webform_strawberryfield/webform_strawberryfield.tus_integration';
+    // PASS the CSFR Token
+    // @TODO. This element should skip anonymous users at all. We should default to the standard upload
+    // Element.
+		$url = Url::fromRoute('webform_strawberryfield.tus.upload', ['webform' => $element['#webform'],'key' => $element['#webform_key']]);
+		$token = \Drupal::csrfToken()->get($url->getInternalPath());
+
+		$element['#attached']['drupalSettings']['webform_strawberryfield']['tus'][$element['#webform_key']]['url'] =  $url->toString();
+    $element['#attached']['drupalSettings']['webform_strawberryfield']['tus'][$element['#webform_key']]['X-CSRF-Token'] = $token;
+
 
     // Add managed file upload tracking.
     if ($this->moduleHandler->moduleExists('file')) {
       $element['#attached']['library'][] = 'webform/webform.element.managed_file';
+
     }
   }
 
