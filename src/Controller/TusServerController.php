@@ -144,7 +144,7 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
       $server->setUploadDir($destination);
       // Get the file destination. WE NEE TO MOVE THIS TO THE CONTROLLER.
       // THAT IS WHERE WE HAVE INFO ABOUT THE WEBFORM/KEY.
-      $server->setMaxUploadSize((int) 10000 * 1048576);
+      $server->setMaxUploadSize((int) $max * 1048576);
       return $server->serve();
     }
     else {
@@ -155,17 +155,20 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
 
   protected function getUploadLocation($webform_entity, $key):array {
     $upload_location = NULL;
+    $max_size = 100; // Mbytes... this will be set by the Element.
     /* @var \Drupal\webform\Entity\Webform $webform_entity */
     $element = $webform_entity->getElementInitialized($key);
     if ($element) {
       $element_plugin = $this->webformElementManager->getElementInstance($element);
       if ($element_plugin->getPluginId() == 'webform_tus_file') {
+        $upload_location = 'private://webform/' . $webform_entity->id() . '/_sid_/' . $this->currentUser()
+            ->getAccountName() . '/tus';
+        //  If we use a custom element we can set this directly $upload_location = $element['#upload_location'];
+        $this->fileSystem->prepareDirectory($upload_location, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
+				$max_size = $element['#max_filesize_tus'] ?? $max_size;
       }
-      $upload_location = 'private://webform/' . $webform_entity->id() . '/_sid_/'.$this->currentUser()->getAccountName().'/tus/';
-      //  If we use a custom element we can set this directly $upload_location = $element['#upload_location'];
-      $this->fileSystem->prepareDirectory($upload_location, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
     }
-    return [$upload_location, 100];
+    return [$upload_location, $max_size];
   }
 
 
