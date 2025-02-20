@@ -154,7 +154,7 @@
                       xhr.onload = (e) => {
                         if (xhr.readyState === 4) {
                           if (xhr.status === 200) {
-                            const fid = JSON.parse(req.responseText);
+                            const fid = JSON.parse(xhr.responseText);
                             if (fid?.fid) {
                               const previous_fids = hidden_input_for_files.value.split(" ").filter((e, i, self) => i === self.indexOf(e));
                               if (!previous_fids.includes(fid?.fid)) {
