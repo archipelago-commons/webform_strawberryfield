@@ -13,6 +13,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Serializer\Encoder\JsonEncoder;
 use Symfony\Component\Serializer\Serializer;
@@ -241,15 +242,16 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
 
     // @TODO change this to loadByProperty.
 
-    $file_query = $this->entityTypeManager()->getStorage('file')->getQuery();
-    $file_query->condition('uri', $request->get('uuid') . '/' . $post_data['fileName'], 'CONTAINS');
-    $file_query->accessCheck(TRUE);
-    $results = $file_query->execute();
-
-    if (!empty($results)) {
-      $response['fid'] = reset($results);
+    $file_storage = $this->entityTypeManager()->getStorage('file');
+    /* @var $existing \Drupal\file\Entity\File[] */
+		$existing = $file_storage->loadByProperties(["uuid" => $request->get('uuid')]);
+		if ($existing) {
+			$file = reset($existing);
+		}
+    else {
+			throw new NotFoundHttpException("We could not find your File on the backend. Please try again or contact your Admin, you might be running out of space.");
     }
-
+    $response['fid'] = $file->id();
     $jsonResponse = new CacheableJsonResponse();
     $jsonResponse->setMaxAge(10);
     $jsonResponse->setData($response);

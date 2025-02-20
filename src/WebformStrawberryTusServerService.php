@@ -108,22 +108,6 @@ class WebformStrawberryTusServerService {
    */
   public function getServer($route_path, string $upload_key = '', array $post_data = []): Server {
     $server = $this->getTusServer($route_path, $upload_key);
-
-    // These methods won't pass metadata about the file, and don't need
-    // file directory, because they are reading from TUS cache, so we
-    // can return the server now.
-    $request_method = strtoupper($server->getRequest()->method());
-    if (in_array($request_method, ['GET', 'HEAD', 'PATCH'], TRUE)) {
-      return $server;
-    }
-
-    // Get upload key for directory creation. On POST, it isn't passed, but
-    // we need to add the UUID to file directory to ensure we don't
-    // concatenate same-file uploads if client key is lost.
-    if ($request_method === 'POST') {
-      $upload_key = $server->getUploadKey();
-    }
-
     return $server;
   }
 
@@ -166,6 +150,7 @@ class WebformStrawberryTusServerService {
     $tus_file = $event->getFile();
     $file_name = $tus_file->getName();
     $file_path = $tus_file->getFilePath();
+		$uuid = $tus_file->getKey();
     $metadata = $tus_file->details()['metadata'];
     // Check if the file already exists.
     $file_query = $this->entityTypeManager->getStorage('file')->getQuery();
@@ -174,14 +159,12 @@ class WebformStrawberryTusServerService {
     $results = $file_query->execute();
 
     if (!empty($results)) {
-      // File already exists, just add usage.
-      $file = reset($results);
-      $this->fileUsage->add($file, 'webform_strawberryfield', 'file', $file->id());
       return;
     }
 
     /** @var \Drupal\file\FileInterface $file */
     $file = File::create([
+			'uuid' => $uuid,
       'uid' => $this->currentUser->id(),
       'filename' => $file_name,
       'uri' => $file_path,
@@ -189,8 +172,6 @@ class WebformStrawberryTusServerService {
       'filesize' => filesize($file_path),
     ]);
     $file->save();
-    // NOT SURE ABOUT THIS...
-    $this->fileUsage->add($file, 'webform_strawberryfield', 'file', $file->id());
 
     // Dispatch an event for other modules to act on.
     $event = new WebformStrawberryFieldTusUploadedEvent($file);

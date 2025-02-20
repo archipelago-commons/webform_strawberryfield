@@ -33,7 +33,6 @@ class WebformTusFile extends WebformManagedFileBase {
    */
   public function getItemFormats() {
     $formats = parent::getItemFormats();
-    //$formats['file'] = $this->t('HTML5 Audio player (MP3 only)');
     return $formats;
   }
 
@@ -198,8 +197,7 @@ class WebformTusFile extends WebformManagedFileBase {
 
     // Add managed file upload tracking.
     if ($this->moduleHandler->moduleExists('file')) {
-      //$element['#attached']['library'][] = 'webform/webform.element.managed_file';
-
+      $element['#attached']['library'][] = 'webform/webform.element.managed_file';
     }
   }
 
