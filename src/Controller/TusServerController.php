@@ -15,6 +15,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
+use Symfony\Component\HttpKernel\Exception\NotAcceptableHttpException;
 use Symfony\Component\Serializer\Encoder\JsonEncoder;
 use Symfony\Component\Serializer\Serializer;
 use Drupal\webform_strawberryfield\WebformStrawberryTusServerService;
@@ -239,23 +240,29 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
   public function uploadToWebformComplete(Request $request, WebformInterface $webform, string $key): Response {
     $response = [];
     $post_data = $this->serializer->decode($request->getContent(), $this->getRequestFormat($request));
-
-    // @TODO change this to loadByProperty.
-
-    $file_storage = $this->entityTypeManager()->getStorage('file');
-    /* @var $existing \Drupal\file\Entity\File[] */
-		$existing = $file_storage->loadByProperties(["uuid" => $request->get('uuid')]);
-		if ($existing) {
-			$file = reset($existing);
+		if (($post_data['fileName'] ?? NULL) && ($request->get('uuid') ?? NULL)) {
+			// Not sure what to do with the $request->get('uuid') yet?
+			// Maybe use it If the first query call fails?
+			// @TODO change this to loadByProperty.
+			[$upload_location, $max_size] = $this->getUploadLocation($webform, $key);
+			$file_storage = $this->entityTypeManager()->getStorage('file');
+			/* @var $existing \Drupal\file\Entity\File[] */
+			$existing = $file_storage->loadByProperties(["uri" => $upload_location . '/' . $post_data['fileName']]);
+			if ($existing) {
+				$file = reset($existing);
+			}
+			else {
+				throw new NotFoundHttpException("We could not find your File on the backend. Please try again or contact your Admin, you might be running out of space.");
+			}
+			$response['fid'] = $file->id();
+			$jsonResponse = new CacheableJsonResponse();
+			$jsonResponse->setMaxAge(10);
+			$jsonResponse->setData($response);
+			return $jsonResponse;
 		}
-    else {
-			throw new NotFoundHttpException("We could not find your File on the backend. Please try again or contact your Admin, you might be running out of space.");
-    }
-    $response['fid'] = $file->id();
-    $jsonResponse = new CacheableJsonResponse();
-    $jsonResponse->setMaxAge(10);
-    $jsonResponse->setData($response);
-    return $jsonResponse;
+  	else {
+			throw new NotAcceptableHttpException("Missing arguments. Filename and UUID.");
+		}
   }
 }
 

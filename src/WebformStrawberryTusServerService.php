@@ -164,7 +164,6 @@ class WebformStrawberryTusServerService {
 
     /** @var \Drupal\file\FileInterface $file */
     $file = File::create([
-			'uuid' => $uuid,
       'uid' => $this->currentUser->id(),
       'filename' => $file_name,
       'uri' => $file_path,

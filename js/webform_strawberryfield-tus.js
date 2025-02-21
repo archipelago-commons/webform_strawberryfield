@@ -29,6 +29,9 @@
             ($input) => {
 
               let upload = null
+              // Sadly we have to use Jquery here. Because webform module uses it to track uploads
+              // And it is targeting ANY upload field. So we can't "omit" ourselves.
+              const $form = $($input.closest('form'));
               let uploadIsRunning = false
               const toggleBtn = $managed_file_wrapper.querySelector('.tus-btn')
               const input = $input
@@ -160,7 +163,12 @@
                               if (!previous_fids.includes(fid?.fid)) {
                                 previous_fids.push(fid?.fid);
                                 hidden_input_for_files.value = previous_fids.join(" ");
+                                // Now we want to decrease the "don't submit thing webform managed JS applies
                               }
+                              // Track file upload. Sadly All Jquery bc of webform module.
+                              $(input).data('webform-auto-file-upload', false);
+                              let fileUploads = ($form.data('webform-auto-file-uploads') || 0);
+                              $form.data('webform-auto-file-uploads', fileUploads - 1);
                             }
                             else {
                               if (window.confirm(`Server could not find your File, might be busy or out of space: \nDo you want to retry?`)) {
@@ -170,6 +178,9 @@
                               }
                               else {
                                 uploadIsRunning = false;
+                                $(input).data('webform-auto-file-upload', false);
+                                let fileUploads = ($form.data('webform-auto-file-uploads') || 0);
+                                $form.data('webform-auto-file-uploads', fileUploads - 1);
                                 reset()
                               }
                             }
@@ -178,11 +189,17 @@
                             progressBar.innerHTML = '';
                           } else {
                             console.error(xhr.statusText);
+                            $(input).data('webform-auto-file-upload', false);
+                            let fileUploads = ($form.data('webform-auto-file-uploads') || 0);
+                            $form.data('webform-auto-file-uploads', fileUploads - 1);
                           }
                         }
                       };
                       xhr.onerror = (e) => {
                         console.error(xhr.statusText);
+                        $(input).data('webform-auto-file-upload', false);
+                        let fileUploads = ($form.data('webform-auto-file-uploads') || 0);
+                        $form.data('webform-auto-file-uploads', fileUploads - 1);
                       };
 
                       xhr.send(JSON.stringify({
@@ -191,6 +208,9 @@
                     }
                     catch (e) {
                       console.log(e);
+                      $(input).data('webform-auto-file-upload', false);
+                      let fileUploads = ($form.data('webform-auto-file-uploads') || 0);
+                      $form.data('webform-auto-file-uploads', fileUploads - 1);
                     }
                     reset()
                   },
@@ -240,6 +260,7 @@
     }
   };
   Drupal.file.triggerUploadButton = function(event) {
+    // @override.
     if (event.target.closest('.webform_strawberryfield_tus')) {
       // Avoid calling the Form Submit Default File handler if this is TUS.
       // WE might want to remove that class IF !tus.isSupported is false ..
