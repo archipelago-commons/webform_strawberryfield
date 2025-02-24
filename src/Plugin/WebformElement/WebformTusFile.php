@@ -163,7 +163,7 @@ class WebformTusFile extends WebformManagedFileBase {
           <div class="progress progress-striped progress-success tus-progress">
             <div class="bar tus-bar" style="width: 0%;height:1rem;background-color:cornflowerblue"></div>
           </div>
-          <span class="btn button stop tus-btn">start upload</span>
+          <span class="btn button stop tus-btn">Start upload</span>
       </div>
       <h3>Uploads</h3>
       <p class="tus-upload-list"></p>'

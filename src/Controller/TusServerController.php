@@ -21,6 +21,7 @@ use Symfony\Component\Serializer\Serializer;
 use Drupal\webform_strawberryfield\WebformStrawberryTusServerService;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\webform\Plugin\WebformElementManagerInterface;
+use Drupal\webform\Entity\Webform;
 
 /**
  * Class TusServerController.
@@ -128,24 +129,14 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
     $meta_values = $this->getMetaValuesFromRequest($request);
     $current_path = $request->getPathInfo();
 
-    // If no upload token (uuid) is provided, verify this request is genuine.
-    // POST requests from Tus will not have an uuid.
-    if (!$uuid) {
-      //$this->verifyRequest($request, $meta_values);
-    }
-
-
-
-
-
     // UUID is passed on PATCH and other certain calls, or as the
     // header upload-key on others.
     $uuid = $uuid ?? $request->headers->get('upload-key') ?? '';
     $server = $this->tusServerService->getServer($current_path, $uuid, $meta_values);
 
 		if (strtolower($server->getRequest()->method()) === 'post') {
+      // Post is called on creation.
 			$uuid = $server->getUploadKey();
-
 		}
 
 
@@ -155,8 +146,6 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
     [$destination, $max] = $this->getUploadLocation($webform, $key, $uuid);
 
     if ($destination) {
-			error_log($server->getUploadKey());
-			error_log($server->getUploadDir());
       $server->setUploadDir($destination);
       // Get the file destination. WE NEE TO MOVE THIS TO THE CONTROLLER.
       // THAT IS WHERE WE HAVE INFO ABOUT THE WEBFORM/KEY.
@@ -169,7 +158,7 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
   }
 
 
-  protected function getUploadLocation($webform_entity, $key, $uuid):array {
+  protected function getUploadLocation(Webform $webform_entity, string $key, string $uuid):array {
     $upload_location = NULL;
     $max_size = 100; // Mbytes... this will be set by the Element.
     /* @var \Drupal\webform\Entity\Webform $webform_entity */
@@ -178,7 +167,7 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
       $element_plugin = $this->webformElementManager->getElementInstance($element);
       if ($element_plugin->getPluginId() == 'webform_tus_file') {
         $upload_location = 'private://webform/' . $webform_entity->id() . '/_sid_/' . $this->currentUser()
-            ->getAccountName() . '/tus' . $key .'/'. $uuid;
+            ->getAccountName() . '/tus/' . $key .'/'. $uuid;
         //  If we use a custom element we can set this directly $upload_location = $element['#upload_location'];
         $this->fileSystem->prepareDirectory($upload_location, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
 				$max_size = $element['#max_filesize_tus'] ?? $max_size;
@@ -187,36 +176,6 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
     return [$upload_location, $max_size];
   }
 
-
-
-  /**
-   * Attempt to verify this is a genuine request from a user.
-   *
-   * Will throw an error if there are issues.
-   *
-   * @param \Symfony\Component\HttpFoundation\Request $request
-   *   The original request.
-   * @param array $meta_values
-   *   Meta values extracted using ::getMetaValuesFromRequest().
-   */
-  protected function verifyRequest(Request $request, array $meta_values): void {
-    // If any of these are missing we can't verify the upload or save it to a
-    // field so there is no point in continuing.
-    if (empty($meta_values['entityType']) ||
-      empty($meta_values['entityBundle']) ||
-      empty($meta_values['fieldName']) ||
-      empty($meta_values['filetype'])) {
-      throw new UnprocessableEntityHttpException('Required metadata fields not passed in.');
-    }
-
-    // Check the uploaded file type is permitted by field.
-    // See file_validate_extensions().
-    $allowed_extensions = 'any';
-    $regex = '/\.(' . preg_replace('/ +/', '|', preg_quote($allowed_extensions)) . ')$/i';
-    if (!preg_match($regex, $meta_values['filename'])) {
-      throw new UnprocessableEntityHttpException(sprintf('Only files with the following extensions are allowed: %s.', $allowed_extensions));
-    }
-  }
 
   /**
    * Get an array of meta values from.

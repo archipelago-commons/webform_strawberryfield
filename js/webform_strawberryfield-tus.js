@@ -41,6 +41,8 @@
               const progress = $managed_file_wrapper.querySelector('.tus-progress')
               const progressBar = progress.querySelector('.tus-bar')
               progressBar.style.minHeight = '1rem';
+              progressBar.style.maxHeight = '1rem';
+              progressBar.style.height = '1rem';
               progressBar.style.backgroundColor = 'blue';
               progressBar.style.width = '0px';
               progressBar.style.textAlign = 'center';
@@ -60,6 +62,7 @@
 
               function reset() {
                 input.value = ''
+                progressBar.style.width = '0px';
                 toggleBtn.textContent = Drupal.t("Start upload");
                 toggleBtn.disabled = false;
                 upload = null
@@ -98,7 +101,7 @@
                   parallelUploads = 1
                 }
 
-                toggleBtn.textContent = 'pause upload'
+                toggleBtn.textContent = Drupal.t('Pause upload');
 
                 const options = {
                   endpoint: endpoint,
