@@ -134,15 +134,29 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
       //$this->verifyRequest($request, $meta_values);
     }
 
+
+
+
+
     // UUID is passed on PATCH and other certain calls, or as the
     // header upload-key on others.
     $uuid = $uuid ?? $request->headers->get('upload-key') ?? '';
     $server = $this->tusServerService->getServer($current_path, $uuid, $meta_values);
+
+		if (strtolower($server->getRequest()->method()) === 'post') {
+			$uuid = $server->getUploadKey();
+
+		}
+
+
     // Each webform might have a different upload destination/key based on their settings
     // We can't upload to S3 though, so in this case all will go to private?
     // See \Drupal\webform\Plugin\WebformElement\WebformManagedFileBase::getUploadLocation
-    [$destination, $max] = $this->getUploadLocation($webform, $key);
+    [$destination, $max] = $this->getUploadLocation($webform, $key, $uuid);
+
     if ($destination) {
+			error_log($server->getUploadKey());
+			error_log($server->getUploadDir());
       $server->setUploadDir($destination);
       // Get the file destination. WE NEE TO MOVE THIS TO THE CONTROLLER.
       // THAT IS WHERE WE HAVE INFO ABOUT THE WEBFORM/KEY.
@@ -155,7 +169,7 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
   }
 
 
-  protected function getUploadLocation($webform_entity, $key):array {
+  protected function getUploadLocation($webform_entity, $key, $uuid):array {
     $upload_location = NULL;
     $max_size = 100; // Mbytes... this will be set by the Element.
     /* @var \Drupal\webform\Entity\Webform $webform_entity */
@@ -164,7 +178,7 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
       $element_plugin = $this->webformElementManager->getElementInstance($element);
       if ($element_plugin->getPluginId() == 'webform_tus_file') {
         $upload_location = 'private://webform/' . $webform_entity->id() . '/_sid_/' . $this->currentUser()
-            ->getAccountName() . '/tus';
+            ->getAccountName() . '/tus' . $key .'/'. $uuid;
         //  If we use a custom element we can set this directly $upload_location = $element['#upload_location'];
         $this->fileSystem->prepareDirectory($upload_location, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
 				$max_size = $element['#max_filesize_tus'] ?? $max_size;
@@ -244,16 +258,21 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
 			// Not sure what to do with the $request->get('uuid') yet?
 			// Maybe use it If the first query call fails?
 			// @TODO change this to loadByProperty.
-			[$upload_location, $max_size] = $this->getUploadLocation($webform, $key);
+			[$upload_location, $max_size] = $this->getUploadLocation($webform, $key, $request->get('uuid'));
 			$file_storage = $this->entityTypeManager()->getStorage('file');
 			/* @var $existing \Drupal\file\Entity\File[] */
 			$existing = $file_storage->loadByProperties(["uri" => $upload_location . '/' . $post_data['fileName']]);
+			/*$client = new \TusPhp\Tus\Client($request->getPathInfo());
+			$client->setKey($request->get('uuid'));
+      // Effectively purges the progress Cache, if any lingering.
+      $client->delete($request->get('uuid')); */
 			if ($existing) {
 				$file = reset($existing);
 			}
 			else {
 				throw new NotFoundHttpException("We could not find your File on the backend. Please try again or contact your Admin, you might be running out of space.");
 			}
+
 			$response['fid'] = $file->id();
 			$jsonResponse = new CacheableJsonResponse();
 			$jsonResponse->setMaxAge(10);

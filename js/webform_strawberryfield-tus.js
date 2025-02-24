@@ -37,6 +37,7 @@
               const input = $input
               $input.classList.toggle('hidden');
               const hidden_input_for_files = $managed_file_wrapper.querySelector('input[type="hidden"]')
+              const hidden_submit_button_for_file = $managed_file_wrapper.querySelector('.js-form-submit[data-drupal-selector$="upload-button"]');
               const progress = $managed_file_wrapper.querySelector('.tus-progress')
               const progressBar = progress.querySelector('.tus-bar')
               progressBar.style.minHeight = '1rem';
@@ -59,7 +60,8 @@
 
               function reset() {
                 input.value = ''
-                toggleBtn.textContent = 'start upload'
+                toggleBtn.textContent = Drupal.t("Start upload");
+                toggleBtn.disabled = false;
                 upload = null
                 uploadIsRunning = false
               }
@@ -126,6 +128,10 @@
                     progressBar.style.color = 'white';
                     progressBar.innerHTML = `${percentage}%`;
                     console.log(bytesUploaded, bytesTotal, `${percentage}%`)
+                    if (percentage == 100) {
+                      toggleBtn.disabled = true;
+                      toggleBtn.textContent = Drupal.t('Please wait...');
+                    }
                   },
                   onSuccess(payload) {
                     const { lastResponse } = payload
@@ -144,12 +150,13 @@
                     try {
                       xhr.ontimeout = (e) => {
                         if (window.confirm(`File Timeout: ${e.reason}\nDo you want to retry?`)) {
+                          toggleBtn.disabled = false;
+                          toggleBtn.textContent = Drupal.t('Pause upload');
                           upload.start()
                           uploadIsRunning = true;
-                          return
+                          return;
                         }
                         else {
-                          uploadIsRunning = false;
                           reset()
                         }
                       };
@@ -169,15 +176,21 @@
                               $(input).data('webform-auto-file-upload', false);
                               let fileUploads = ($form.data('webform-auto-file-uploads') || 0);
                               $form.data('webform-auto-file-uploads', fileUploads - 1);
+                              toggleBtn.disabled = false;
+                              reset();
+                              // Submit the form so we can reload with the proper file size/preview links etc.
+                              var mousedown = new Event('mousedown');
+                              hidden_submit_button_for_file.dispatchEvent(mousedown);
                             }
                             else {
                               if (window.confirm(`Server could not find your File, might be busy or out of space: \nDo you want to retry?`)) {
+                                toggleBtn.disabled = false;
+                                toggleBtn.textContent = Drupal.t('Pause upload');
                                 upload.start()
                                 uploadIsRunning = true;
                                 return
                               }
                               else {
-                                uploadIsRunning = false;
                                 $(input).data('webform-auto-file-upload', false);
                                 let fileUploads = ($form.data('webform-auto-file-uploads') || 0);
                                 $form.data('webform-auto-file-uploads', fileUploads - 1);
@@ -188,18 +201,21 @@
                             progressBar.style.width = '0px';
                             progressBar.innerHTML = '';
                           } else {
-                            console.error(xhr.statusText);
+                            window.alert('Server had an issue processing the file. the error code is ' + xhr.status  + '.Please try again and/or report this to your Admin');
                             $(input).data('webform-auto-file-upload', false);
                             let fileUploads = ($form.data('webform-auto-file-uploads') || 0);
                             $form.data('webform-auto-file-uploads', fileUploads - 1);
+                            reset();
                           }
                         }
                       };
                       xhr.onerror = (e) => {
                         console.error(xhr.statusText);
+                        window.alert('Server had an issue processing the file. the error code is ' + xhr.status  + '.Please try again and/or report this to your Admin');
                         $(input).data('webform-auto-file-upload', false);
                         let fileUploads = ($form.data('webform-auto-file-uploads') || 0);
                         $form.data('webform-auto-file-uploads', fileUploads - 1);
+                        reset();
                       };
 
                       xhr.send(JSON.stringify({
@@ -207,10 +223,11 @@
                       }));
                     }
                     catch (e) {
-                      console.log(e);
+                      window.alert('Server had an issue processing the file. the error is: ' + e.toString()  + '.Please try again and/or report this to your Admin');
                       $(input).data('webform-auto-file-upload', false);
                       let fileUploads = ($form.data('webform-auto-file-uploads') || 0);
                       $form.data('webform-auto-file-uploads', fileUploads - 1);
+                      reset();
                     }
                     reset()
                   },
@@ -234,15 +251,18 @@
 
               toggleBtn.addEventListener('click', (e) => {
                 e.preventDefault()
+                if (toggleBtn.disabled) {
+                  return;
+                }
 
                 if (upload) {
                   if (uploadIsRunning) {
                     upload.abort()
-                    toggleBtn.textContent = 'resume upload'
+                    toggleBtn.textContent = Drupal.t('Resume upload');
                     uploadIsRunning = false
                   } else {
                     upload.start()
-                    toggleBtn.textContent = 'pause upload'
+                    toggleBtn.textContent = Drupal.t('Pause upload');
                     uploadIsRunning = true
                   }
                 } else if (input.files.length > 0) {
