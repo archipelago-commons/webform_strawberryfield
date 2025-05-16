@@ -390,6 +390,9 @@ class StrawberryRunnerModalController extends ControllerBase {
             if ($elements_in_datum['#webform_plugin_id'] == "entity_autocomplete" && count($data['data'][$key]) == 1) {
               // Do nothing. We accept this bc the element actually can load a single entry array.
             }
+            elseif ($elements_in_datum['#webform_plugin_id'] == "webform_metadata_panoramatour") {
+              // Do nothing. We accept this bc webform panorama tour builder is a special computed/complex field.
+            }
             else {
               // Multiple entries for a single valued element. Bad.
               $error_elements_why[$key] = t('@key contains multiple values but <em>@element_name</em> is configured for a single one', [
