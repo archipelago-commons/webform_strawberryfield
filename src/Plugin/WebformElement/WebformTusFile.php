@@ -94,13 +94,13 @@ class WebformTusFile extends WebformManagedFileBase {
     // NOTE: Using array_splice() to make sure that static::validateManagedFile
     // is executed before all other validation hooks are executed but after
     // \Drupal\file\Element\ManagedFile::validateManagedFile.
-		$element['#element_validate'] = $element['#element_validate'] ?? [];
+    $element['#element_validate'] = $element['#element_validate'] ?? [];
     array_splice($element['#element_validate'], 1, 0, $element_validate);
 
 
     // The class used to bind the TUS JS code.
-		$element['#attributes']['class'][] = 'webform_strawberryfield_tus';
-     // Upload validators.
+    $element['#attributes']['class'][] = 'webform_strawberryfield_tus';
+    // Upload validators.
     // @see webform_preprocess_file_upload_help
     $element['#upload_validators']['file_validate_size'] = [$this->getMaxFileSize($element)];
     $element['#upload_validators']['file_validate_extensions'] = [$this->getFileExtensions($element)];
@@ -154,11 +154,11 @@ class WebformTusFile extends WebformManagedFileBase {
       $container[$element['#webform_key']] = $element + ['#webform_managed_file_processed' => TRUE];
       $element = $container;
     }
-     // Add the TUS basic interface
+    // Add the TUS basic interface
 
- // This should just go into the theme preprocess function.
-		$element['status'] = [
-			  '#markup' => '
+    // This should just go into the theme preprocess function.
+    $element['status'] = [
+      '#markup' => '
 			  <div class="row">
           <div class="progress progress-striped progress-success tus-progress">
             <div class="bar tus-bar" style="width: 0%;height:1rem;background-color:cornflowerblue"></div>
@@ -169,7 +169,7 @@ class WebformTusFile extends WebformManagedFileBase {
       <p class="tus-upload-list"></p>'
     ];
 
-		// Allow ManagedFile Ajax callback to disable flexbox wrapper.
+    // Allow ManagedFile Ajax callback to disable flexbox wrapper.
     // @see \Drupal\file\Element\ManagedFile::uploadAjaxCallback
     // @see \Drupal\webform\Plugin\WebformElementBase::preRenderFixFlexboxWrapper
     $request_params = \Drupal::request()->request->all();
@@ -188,10 +188,10 @@ class WebformTusFile extends WebformManagedFileBase {
     // PASS the CSFR Token
     // @TODO. This element should skip anonymous users at all. We should default to the standard upload
     // Element.
-		$url = Url::fromRoute('webform_strawberryfield.tus.upload', ['webform' => $element['#webform'],'key' => $element['#webform_key']],  ['absolute' => TRUE]);
-		$token = \Drupal::csrfToken()->get(\Drupal\Core\Access\CsrfRequestHeaderAccessCheck::TOKEN_KEY);
+    $url = Url::fromRoute('webform_strawberryfield.tus.upload', ['webform' => $element['#webform'],'key' => $element['#webform_key']],  ['absolute' => TRUE]);
+    $token = \Drupal::csrfToken()->get(\Drupal\Core\Access\CsrfRequestHeaderAccessCheck::TOKEN_KEY);
 
-		$element['#attached']['drupalSettings']['webform_strawberryfield']['tus'][$element['#webform_key']]['url'] =  $url->toString();
+    $element['#attached']['drupalSettings']['webform_strawberryfield']['tus'][$element['#webform_key']]['url'] =  $url->toString();
     $element['#attached']['drupalSettings']['webform_strawberryfield']['tus'][$element['#webform_key']]['X-CSRF-Token'] = $token;
 
 
@@ -238,7 +238,7 @@ class WebformTusFile extends WebformManagedFileBase {
       '#max' => 10000,
       '#step' => 'any',
     ];
-		return $form;
+    return $form;
 
   }
 
