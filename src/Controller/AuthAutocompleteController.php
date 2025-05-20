@@ -2,7 +2,6 @@
 
 namespace Drupal\webform_strawberryfield\Controller;
 
-use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Cache\UseCacheBackendTrait;
 use Drupal\Core\Config\ConfigFactoryInterface;
@@ -156,7 +155,20 @@ class AuthAutocompleteController extends ControllerBase implements ContainerInje
     //@TODO if so, we can query the plugins and show in the webform builder options
     // Get the typed string from the URL, if it exists.
 
-    $apikey = Settings::get('webform_strawberryfield.europeana_entity_apikey');
+    $eu_apikey = Settings::get('webform_strawberryfield.europeana_entity_apikey');
+    //$orcid_auth_client_id = Settings::get('webform_strawberryfield.orcid_auth_token');
+    $orcid_client_id = Settings::get('webform_strawberryfield.orcid_client_id');
+    $orcid_client_secret = Settings::get('webform_strawberryfield.orcid_client_secret');
+
+    if (!empty($orcid_client_id) && !empty($orcid_client_secret)) {
+      $this->getOrcIDAuth($orcid_client_id, $orcid_client_secret);
+    }
+    // Request token if not yet set AND we have the needed Client ID and Secret
+    // After that set it. According to ORCID the token lasts 20 years! I should
+    // be harvesting tomatoes by then (with my dogs and someone that loves me)
+
+
+
     $input = $request->query->get('q');
     $csrf_token = $request->headers->get('X-CSRF-Token');
     $is_internal = FALSE;
@@ -171,7 +183,7 @@ class AuthAutocompleteController extends ControllerBase implements ContainerInje
 
     if ($input) {
       $rdftype_str = $rdftype ?? 'null';
-      $apikey_hash = $apikey ?? 'null';
+      $apikey_hash = $eu_apikey ?? 'null';
       $count = $count ?? 10;
       $cache_var = md5($auth_type.$input.$vocab.$rdftype_str.$count.$apikey_hash);
       $cache_id = 'webform_strawberry:auth_lod:' . $cache_var;
@@ -191,7 +203,7 @@ class AuthAutocompleteController extends ControllerBase implements ContainerInje
           $results = $this->wikidata($input);
           break;
         case 'aat':
-          // @TODO this will be deprecated in 1.1. legacy so old access can be kept
+          // @Legacy so old access can be kept.
           $results = $this->getty($input, 'aat', $rdftype);
           break;
         case 'getty':
@@ -206,9 +218,12 @@ class AuthAutocompleteController extends ControllerBase implements ContainerInje
         case 'snac':
           $results = $this->snac($input, $vocab, $rdftype);
           break;
+        case 'orcid':
+          $results = $this->orcid($input, $rdftype, $count);
+          break;
         case 'europeana':
-          if ($apikey) {
-            $results = $this->europeana($input, $vocab, $apikey);
+          if ($apikey_hash) {
+            $results = $this->europeana($input, $vocab, $apikey_hash);
           }
           else {
             $this->messenger()->addError(
@@ -754,7 +769,7 @@ SPARQL;
      ]
   }
       */
-      // @NOTE: This is Entities API is 0.10.3 (December 2021)and it might chang. So review the API every 6 months
+      // @NOTE: This is Entities API is 0.10.3 (December 2021) and it might change. So review the API every 6 months
       if (isset($jsondata['total']) &&  $jsondata['total'] >= 1 && isset($jsondata['items']) && is_array($jsondata['items'])) {
         foreach ($jsondata['items'] as $key => $result) {
           $desc = NULL;
@@ -795,6 +810,102 @@ SPARQL;
       )
     );
     return [];
+  }
+
+  /**
+   * @param $input
+   *    The query
+   * @param $vocab
+   *   Europeana Entity Type requested
+   *
+   * @param $apikey
+   *
+   * @return array
+   */
+  protected function orcid($input, $rdftype, int $count = 10 ) {
+
+    $results[] = [
+      'value' => NULL,
+      'label' => "ORCID autocomplete requires Last Name(s) of minimum 2 characters length, followed by a comma, followed by Given Names of minimum 2 characters length followed by a space. ",
+    ];
+    //return $results;
+
+    // First check the input
+    // We need a comma,
+    // each part at least 2 characters
+    // ending in a space
+    if (strlen($input) < 6) {
+      return $results;
+    }
+    $input_parts = explode(",", $input);
+    $valid = FALSE;
+    $valid = strlen(trim($input_parts[0] ?? '')) > 1 && strlen(trim($input_parts[1] ?? '')) > 1;
+    if (!$valid) {
+      return $results;
+    }
+
+    $input_family ="(". rawurlencode('"'.trim($input_parts[0]).'"').")";
+    $input_given = "(". rawurlencode('"'.trim($input_parts[1]).'"').")";
+
+    // https://pub.orcid.org/v3.0/csv-search/?q=family-name:(%22Pino+Navarro%22)&fl=orcid,given-names,family-name,current-institution-affiliation-name,past-institution-affiliation-name&rows=2
+
+
+    $urlindex = "/?q=family-name:" . $input_family . "+AND+given-names:" . $input_given .'&fl=orcid,given-names,family-name,current-institution-affiliation-name,past-institution-affiliation-name&rows='.$count;
+
+    $baseurl = 'https://pub.orcid.org/v3.0/csv-search';
+    $remoteUrl = $baseurl . $urlindex;
+    $options = [];
+    $body = $this->getRemoteJsonData($remoteUrl, $options);
+    /* Body will be a CSV, comma separated
+    orcid,given-names,family-name,current-institution-affiliation-name,past-institution-affiliation-name
+0000-0002-8795-2113,Diego Alberto,Pino Navarro,Metropolitan New York Library Council,
+0009-0009-3194-127X,Diego de Jesús,"Pino Navarro ","Universidad CES,Universidad CES",
+    */
+    if (!$body || !is_string($body)) {
+      $results[] = [
+        'value' => NULL,
+        'label' => "Sorry, ORCID  API did not return any matches for Family name(s) {$input_family}, Given Name(s) {$input_given}",
+      ];
+      return $results;
+    }
+
+    $body_decoded = str_getcsv($body, "\n",  "\"", "\\"); //parse the rows
+    unset($body_decoded[0]);
+    if (count($body_decoded) < 1) {
+      $results[] = [
+        'value' => NULL,
+        'label' => "Sorry, ORCID  API did not return any matches for Family name(s) {$input_family}, Given Name(s) {$input_given}",
+      ];
+      return $results;
+    }
+    foreach ($body_decoded as &$row) {
+        $row = str_getcsv($row,  ",", "\"", "\\"); //parse the items in rows
+    }
+
+
+    $results = [];
+
+    foreach ($body_decoded as $row => $result) {
+      $label = '';
+      if (!empty($result[2]) || !empty($result[1])) {
+        $label = $result[2];
+        $label = !(empty($result[1])) ? $label. ',' . $result[1] : $label;
+        $desc = NULL;
+
+        if (!empty($result[3])) {
+          $desc = '( at ' . $result[3] . (!empty($result[4]) ? 'previously at ' . $result[4] : '') . ')';
+        }
+
+        $label = empty($desc) ? $label : $label . $desc;
+
+        $results[] = [
+          'value' => $result[0],
+          'label' => $label,
+          'desc' => $desc,
+        ];
+      }
+    }
+    return $results;
   }
 
   /**
@@ -1072,5 +1183,64 @@ SPARQL;
   public function setNotAllowed(bool $notAllowed): void {
     $this->notAllowed = $notAllowed;
   }
+
+  /**
+   * @param string $client_id
+   *    The ORC ID Public API Client ID
+   * @param string $secret
+   *    The ORC ID Public API Secret
+   *
+   * @return bool|string
+   */
+  public function getOrcIDAuth(string $client_id, string $secret): bool|string {
+
+    // The token for future interaction will be stored in the drupal state.
+    $base64 = \Drupal::state()->get('webform.orcid_token');
+    $json_token = [];
+    $token = NULL;
+    if (is_string($base64) && $json_token = json_decode(base64_decode($base64), true)) {
+      if (is_array($json_token)) {
+        $token = $json_token["access_token"] ?? NULL;
+      }
+    }
+
+    if ($token) { return $token; }
+
+    $remoteOrCIDAuthUrl = "https://orcid.org/oauth/token";
+    $options['headers'] = ['Accept' => 'application/json'];
+    $options['form_params'] = [
+      'client_id' => $client_id,
+      'client_secret' => $secret,
+      'grant_type' => 'client_credentials',
+      'scope' =>  '/read-public'
+    ];
+    // Response should be   {"access_token":"SOME_UUID","token_type":"bearer",
+    //"refresh_token":"ANOTHER_UUID","expires_in":631138518,
+    //"scope":"/read-public","orcid":null} &*/ or null/empt it wrong.
+
+    $response = $this->getRemoteJsonData($remoteOrCIDAuthUrl, $options, 'POST');
+    $orcd_id_token_response = json_decode($response, TRUE);
+
+    $json_error = json_last_error();
+
+    if ($json_error != JSON_ERROR_NONE ||  !($orcd_id_token_response['access_token'] ?? NULL)) {
+      $this->getLogger('webform_strawberryfield')
+        ->error('Your ORCID API Credentials are invalid. Please ask your System Admin to register/check at ORCID for a Developer Account and set them in your global settings (NO UI for secrets)',
+          [
+            '@url' => $remoteOrCIDAuthUrl,
+          ]
+        );
+      return FALSE;
+    }
+    if ($orcd_id_token_response['access_token'] ?? NULL) {
+      $base64 = base64_encode(json_encode($orcd_id_token_response));
+      $base64 = \Drupal::state()->set('webform.orcid_token', $base64);
+      return $orcd_id_token_response['access_token'];
+    }
+    else {
+      return FALSE;
+    }
+  }
+
 
 }
