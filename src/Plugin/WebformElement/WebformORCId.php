@@ -148,16 +148,6 @@ class WebformORCId extends WebformCompositeBase {
       '#title' => $this->t("ORCID Public API to use."),
       '#description' => $this->t('Currently only Public ORCID from Family/Given names is supported'),
     ];
-    // Not sure if this has a sub authority and how that works/if suggest
-    $form['composite']['matchtype'] = [
-      '#type' => 'select',
-      '#options' => [
-        'fuzzy' => 'Both Family and Given names will allow a fuzzier match',
-        'exact' => 'Exact, Family and Given will need to match exactly.',
-      ],
-      '#title' => $this->t("What type of Match Query to perform"),
-      '#description' => $this->t('All match types return the same number of results.'),
-    ];
     return $form;
   }
 
