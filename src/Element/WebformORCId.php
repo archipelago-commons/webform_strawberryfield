@@ -77,10 +77,10 @@ class WebformORCId extends WebformCompositeBase {
 
     $element = parent::processWebformComposite($element, $form_state, $complete_form);
     if (isset($element['#vocab'])) {
-      $vocab = $element['#vocab'];
+      $vocab = $element['#vocab'] ?? 'orcid';
     }
     if (isset($element['#matchtype'])) {
-      $matchtype = $element['#matchtype'];
+      $matchtype = $element['#matchtype'] ?? 'exact';
     }
 
     $element['label']["#autocomplete_route_parameters"] =
