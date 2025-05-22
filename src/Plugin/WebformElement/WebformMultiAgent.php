@@ -141,13 +141,13 @@ class WebformMultiAgent extends WebformCompositeBase {
 
     $form['composite']['name_label'] = [
       '#type' => 'textfield',
-      '#title' => $this->t("Sub elelement Key name (field) that will hold the Name label, defaults to 'name_label'"),
+      '#title' => $this->t("Sub element Key name (field) that will hold the Name label, defaults to 'name_label'"),
       '#default_value' => 'name_label',
     ];
 
     $form['composite']['name_uri'] = [
       '#type' => 'textfield',
-      '#title' => $this->t("Sub elelement Key name (field) that will hold the URI of the autocompleted Name, defaults to 'name_uri'"),
+      '#title' => $this->t("Sub element Key name (field) that will hold the URI of the autocompleted Name, defaults to 'name_uri'"),
       '#default_value' => 'name_label',
     ];
 
