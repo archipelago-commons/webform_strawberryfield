@@ -7,7 +7,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\webform\Element\WebformCompositeBase;
 use Drupal\webform\Element\WebformMultiple;
 use Drupal\Component\Utility\Html;
-
+use Drupal\webform\Utility\WebformElementHelper;
 
 /**
  * Provides a webform element for a LoC based Agents with Roles.
@@ -30,6 +30,9 @@ class WebformMultiAgent extends WebformCompositeBase {
         '#role_type' => 'loc',
         '#name_label' => 'name_label',
         '#name_uri' => 'name_uri',
+        '#agent_type' => 'agent_type',
+        '#role_label' => 'role_label',
+        '#role_uri' => 'role_uri',
       ];
     return $info;
   }
@@ -42,19 +45,20 @@ class WebformMultiAgent extends WebformCompositeBase {
     // This god forsaken function gets called many many times
     // and it gets more and more data everytime!
     // Why? We may never know
-    $class = '\Drupal\webform_strawberryfield\Element\WebformMultiAgent';
+    $class = '\Drupal\webform_strawberryfield\Element\WebformScholarlyAgent';
 
     $vocab_personal_name = 'names';
     $rdftype_personal_name = 'thing';
     $role_type = 'loc';
 
-
     $name_label_key = $element['#name_label'] ?? 'name_label';
     $name_uri_key = $element['#name_uri'] ?? 'name_uri';
     $name_label_key = trim($name_label_key);
     $name_uri_key = trim($name_uri_key);
-
-
+    $agent_type_key = $element['#agent_type'] ?? 'agent_type';
+    $agent_type_key = trim($agent_type_key);
+    $role_label_key = $element['#role_label'] ?? 'role_label';
+    $role_uri_key = $element['#role_uri'] ?? 'role_uri';
 
     if (isset($element['#vocab_personal_name'])) {
       $vocab_personal_name = $element['#vocab_personal_name'];
@@ -67,13 +71,16 @@ class WebformMultiAgent extends WebformCompositeBase {
       $role_type = $element['#role_type'];
     }
 
-    $elements['agent_type'] = [
+    $elements[$agent_type_key] = [
       '#type' => 'select',
-      '#title' => t('Agent Type'),
-      '#title_display' => 'invisible',
+      '#title' => $element['#agent_type__title'] ?? t('Agent Type'),
+      '#title_display' => $element['#agent_type__title_display'] ?? 'before',
+      '#description' => $element['#agent_type__description'] ?? '',
+      '#help' => $element['#agent_type__help'] ?? '',
+      '#required' => $element['#agent_type__required'] ?? FALSE,
       '#attributes' => [
         'data-source-strawberry-autocomplete-key' => $name_label_key,
-        ],
+      ],
       '#options' => [
         'corporate' => 'Corporate',
         'personal' => 'Personal',
@@ -84,9 +91,19 @@ class WebformMultiAgent extends WebformCompositeBase {
 
     $elements[$name_label_key] = [
       '#type' => 'textfield',
-      '#title' => t('Agent Name'),
+      '#title' => $element['#name_label__title'] ?? t('Agent Name'),
+      '#title_display' => $element['#name_label__title_display'] ?? 'before',
+      '#other__placeholder' => $element['#name_label__placeholder'] ?? '',
+      '#description' => $element['#name_label__description'] ?? '',
+      '#help' => $element['#name_label__help'] ?? '',
+      '#required' => $element['#name_label__required'] ?? FALSE,
       '#autocomplete_route_name' => 'webform_strawberryfield.auth_autocomplete',
-      '#autocomplete_route_parameters' => ['auth_type' => 'loc', 'vocab' => $vocab_personal_name, 'rdftype'=> $rdftype_personal_name ,'count' => 10],
+      '#autocomplete_route_parameters' => [
+        'auth_type' => 'loc',
+        'vocab' => $vocab_personal_name,
+        'rdftype' => $rdftype_personal_name,
+        'count' => 10
+      ],
       '#attributes' => [
         'data-source-strawberry-autocomplete-key' => $name_label_key,
         'data-target-strawberry-autocomplete-key' => $name_uri_key
@@ -95,13 +112,24 @@ class WebformMultiAgent extends WebformCompositeBase {
     ];
     $elements[$name_uri_key] = [
       '#type' => 'url',
-      '#title' => t('Agent URL'),
+      '#title' => $element['#name_uri__title'] ?? t('Agent URL'),
+      '#title_display' => $element['#name_uri__title_display'] ?? 'before',
+      '#other__placeholder' => $element['#name_uri__placeholder'] ?? '',
+      '#description' => $element['#name_uri__description'] ?? '',
+      '#help' => $element['#name_uri__help'] ?? '',
+      '#required' => $element['#name_uri__required'] ?? FALSE,
       '#attributes' => ['data-strawberry-autocomplete-value' => TRUE]
+
     ];
 
-    $elements['role_label'] = [
+    $elements[$role_label_key] = [
       '#type' => 'textfield',
-      '#title' => t('Role'),
+      '#title' => $element['#role_label__title'] ?? t('Role'),
+      '#title_display' => $element['#role_label__title_display'] ?? 'before',
+      '#description' => $element['#role_label__description'] ?? '',
+      '#help' => $element['#role_label__help'] ?? '',
+      '#required' => $element['#role_label__required'] ?? FALSE,
+      '#other__placeholder' => $element['#role_label__placeholder'] ?? '',
       '#autocomplete_route_name' => 'webform_strawberryfield.auth_autocomplete',
       '#autocomplete_route_parameters' => [
         'auth_type' => $role_type,
@@ -110,18 +138,23 @@ class WebformMultiAgent extends WebformCompositeBase {
         'count' => 10
       ],
       '#attributes' => [
-        'data-source-strawberry-autocomplete-key' => 'role_label',
-        'data-target-strawberry-autocomplete-key' => 'role_uri'
+        'data-source-strawberry-autocomplete-key' => $role_label_key,
+        'data-target-strawberry-autocomplete-key' => $role_uri_key
       ],
 
     ];
-    $elements['role_uri'] = [
+    $elements[$role_uri_key] = [
       '#type' => 'url',
-      '#title' => t('Role URL'),
+      '#title' => $element['#role_uri__title'] ?? t('Role URL'),
+      '#title_display' => $element['#role_uri__title_display'] ?? 'before',
+      '#description' => $element['#role_uridescription'] ?? '',
+      '#help' => $element['#role_uri__help'] ?? '',
+      '#required' => $element['#role_uri__required'] ?? FALSE,
+      '#other__placeholder' => $element['#role_uri__placeholder'] ?? '',
       '#attributes' => ['data-strawberry-autocomplete-value' => TRUE]
     ];
-    $elements[$name_label_key]['#process'][] =  [$class, 'processAutocomplete'];
-    $elements['role_label']['#process'][] =  [$class, 'processAutocomplete'];
+    $elements[$name_label_key]['#process'][] = [$class, 'processAutocomplete'];
+    $elements[$role_label_key]['#process'][] = [$class, 'processAutocomplete'];
     return $elements;
   }
 
@@ -186,10 +219,12 @@ class WebformMultiAgent extends WebformCompositeBase {
     $name_uri_key = $element['#name_uri'] ?? 'name_uri';
     $name_label_key = trim($name_label_key);
     $name_uri_key = trim($name_uri_key);
+    $agent_type_key = $element['#agent_type'] ?? 'agent_type';
+    $agent_type_key = trim($agent_type_key);
+    $role_label_key = $element['#role_label'] ?? 'role_label';
+    $role_uri_key = $element['#role_uri'] ?? 'role_uri';
 
-
-
-    $element['agent_type']['#ajax'] = $ajax;
+    $element[$agent_type_key]['#ajax'] = $ajax;
 
     if (isset($element['#role_type'])) {
       $role_type = $element['#role_type'];
@@ -232,13 +267,18 @@ class WebformMultiAgent extends WebformCompositeBase {
       $rdftype_corporate_name = 'thing';
     }
 
-    $autocomplete_label_default =  ['auth_type' => 'loc', 'vocab' => $vocab_personal_name, 'rdftype'=> $rdftype_personal_name ,'count' => 10];
+    $autocomplete_label_default = [
+      'auth_type' => 'loc',
+      'vocab' => $vocab_personal_name,
+      'rdftype' => $rdftype_personal_name,
+      'count' => 10
+    ];
 
     $form_state_key = $element['#parents'];
     // In case of multiple elements the actual value (form state) will be buried deep
     // into some extra item wrappers. So we use the #parent of the element to match
     // and it should be enough!
-    $form_state_key[] = 'agent_type';
+    $form_state_key[] = $agent_type_key;
 
     if ($form_state->getValue($form_state_key)) {
       $agent_type = $form_state->getValue($form_state_key);
@@ -270,14 +310,20 @@ class WebformMultiAgent extends WebformCompositeBase {
 
     $element[$name_label_key]['#autocomplete_route_parameters'] = $autocomplete_label_default;
 
-    $element[$name_label_key]['#prefix'] = '<div id="'.$unique_id.'">';
+    $element[$name_label_key]['#prefix'] = '<div id="' . $unique_id . '">';
     $element[$name_label_key]['#suffix'] = '</div>';
 
     $element['role_label']['#autocomplete_route_parameters'] =
-      ['auth_type' => $role_type, 'vocab' => 'relators', 'rdftype' => 'thing',  'count' => 10];
+      [
+        'auth_type' => $role_type,
+        'vocab' => 'relators',
+        'rdftype' => 'thing',
+        'count' => 10
+      ];
 
     return $element;
   }
+
   /**
    * @param array $element
    * @param \Drupal\Core\Form\FormStateInterface $form_state
@@ -296,4 +342,74 @@ class WebformMultiAgent extends WebformCompositeBase {
     $element['#attributes']['data-strawberry-autocomplete'] = 'Multi';
     return $element;
   }
+
+  protected static function initializeCompositeElementsRecursive(array &$element, array &$composite_elements) {
+    /** @var \Drupal\webform\Plugin\WebformElementManagerInterface $element_manager */
+    $element_manager = \Drupal::service('plugin.manager.webform.element');
+    // Very similar to its parent. But, because we allow the user to override the default keys, we are going to take that in account here
+    //Mappins are new keys => original ones
+    $key_mappings = [
+      trim($element['#name_label'] ?? '') ?? 'name_label '=> 'name_label',
+      trim($element['#name_uri'] ?? '') ?? 'name_uri' => 'name_uri',
+      trim($element['#agent_type'] ?? '') ?? 'agent_type' => 'agent_type',
+      trim($element['#role_label'] ?? '') ?? 'role_label' =>  'role_label',
+      trim($element['#role_uri'] ?? '') ?? 'role_uri' => 'role_uri',
+    ];
+    // $composite_elements already holds the new keys
+    foreach ($composite_elements as $composite_key => &$composite_element) {
+      if (WebformElementHelper::property($composite_key)) {
+        continue;
+      }
+
+      // Transfer '#{composite_key}_{property}' from main element to composite
+      // element but taking in account the new keys provided by the user
+      foreach ($element as $property_key => $property_value) {
+        if ((strpos($property_key, '#' . $composite_key . '__') === 0)){
+          $composite_property_key = str_replace('#' . $composite_key . '__', '#', $property_key);
+          $composite_element[$composite_property_key] = $property_value;
+        }
+        elseif  (strpos($property_key, '#' . $key_mappings[$composite_key] . '__') === 0) {
+          $composite_property_key = str_replace('#' . $key_mappings[$composite_key]  . '__', '#', $property_key);
+          $composite_element[$composite_property_key] = $property_value;
+        }
+      }
+
+      // Initialize composite sub-element.
+      $element_plugin = $element_manager->getElementInstance($composite_element);
+
+      // Make sure to remove any #options references from unsupported elements.
+      // This prevents "An illegal choice has been detected." error.
+      // @see FormValidator::performRequiredValidation()
+      if (isset($composite_element['#options']) && !$element_plugin->hasProperty('options')) {
+        unset($composite_element['#options']);
+      }
+
+      // Convert #placeholder to #empty_option for select elements.
+      if (isset($composite_element['#placeholder']) && $element_plugin->hasProperty('empty_option')) {
+        $composite_element['#empty_option'] = $composite_element['#placeholder'];
+      }
+
+      // Apply #select2, #choices, and #chosen to select elements.
+      if (isset($composite_element['#type']) && strpos($composite_element['#type'], 'select') !== FALSE) {
+        $select_properties = [
+          '#select2' => '#select2',
+          '#choices' => '#choices',
+          '#chosen' => '#chosen',
+        ];
+        $composite_element += array_intersect_key($element, $select_properties);
+      }
+
+      if ($element_plugin->hasMultipleValues($composite_element)) {
+        throw new \Exception('Multiple elements are not supported within composite elements.');
+      }
+      if ($element_plugin->isComposite()) {
+        throw new \Exception('Nested composite elements are not supported within composite elements.');
+      }
+
+      $element_plugin->initialize($composite_element);
+
+      static::initializeCompositeElementsRecursive($element, $composite_element);
+    }
+  }
+
 }

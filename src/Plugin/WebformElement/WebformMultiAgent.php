@@ -37,9 +37,12 @@ class WebformMultiAgent extends WebformCompositeBase {
       'rdftype_family_name' => '',
       'vocab_corporate_name' => '',
       'rdftype_corporate_name' => '',
+      'agent_type' => '',
       'role_type' => '',
       'name_label' => '',
       'name_uri' => '',
+      'role_label' => '',
+      'role_uri' => '',
     ] + parent::defineDefaultBaseProperties();
   }
 
@@ -55,6 +58,9 @@ class WebformMultiAgent extends WebformCompositeBase {
         'role_type' => '',
         'name_label' => 'name_label',
         'name_uri' => 'name_uri',
+        'agent_type' => 'agent_type',
+        'role_label' => 'role_label',
+        'role_uri' => 'role_uri',
       ];
 
     unset($properties['multiple__header']);
@@ -139,16 +145,28 @@ class WebformMultiAgent extends WebformCompositeBase {
   public function form(array $form, FormStateInterface $form_state) {
     $form = parent::form($form, $form_state);
 
+    $form['composite']['agent_type'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t("Sub element Key name (field) that will hold the Agent Type, defaults to 'agent_type'"),
+    ];
     $form['composite']['name_label'] = [
       '#type' => 'textfield',
       '#title' => $this->t("Sub element Key name (field) that will hold the Name label, defaults to 'name_label'"),
-      '#default_value' => 'name_label',
     ];
 
     $form['composite']['name_uri'] = [
       '#type' => 'textfield',
       '#title' => $this->t("Sub element Key name (field) that will hold the URI of the autocompleted Name, defaults to 'name_uri'"),
-      '#default_value' => 'name_label',
+    ];
+
+    $form['composite']['role_label'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t("Sub element Key name (field) that will hold the Role label, defaults to 'role_label'"),
+    ];
+
+    $form['composite']['role_uri'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t("Sub element Key name (field) that will hold the URI of the autocompleted Role, defaults to 'role_uri'"),
     ];
 
     $form['composite']['vocab_personal_name'] = [
