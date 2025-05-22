@@ -86,7 +86,7 @@ class WebformMultiAgent extends WebformCompositeBase {
         'personal' => 'Personal',
         'family' => 'Family'
       ],
-      '#default_value' => 'Personal'
+      '#default_value' => 'personal'
     ];
 
     $elements[$name_label_key] = [
@@ -348,6 +348,8 @@ class WebformMultiAgent extends WebformCompositeBase {
     $element_manager = \Drupal::service('plugin.manager.webform.element');
     // Very similar to its parent. But, because we allow the user to override the default keys, we are going to take that in account here
     //Mappins are new keys => original ones
+    // Because this is called recursively, chances are the key mappings won't exist
+    // at deeper levels, so we check with an isset().
     $key_mappings = [
       trim($element['#name_label'] ?? '') ?? 'name_label '=> 'name_label',
       trim($element['#name_uri'] ?? '') ?? 'name_uri' => 'name_uri',
@@ -360,7 +362,6 @@ class WebformMultiAgent extends WebformCompositeBase {
       if (WebformElementHelper::property($composite_key)) {
         continue;
       }
-
       // Transfer '#{composite_key}_{property}' from main element to composite
       // element but taking in account the new keys provided by the user
       foreach ($element as $property_key => $property_value) {
@@ -368,7 +369,7 @@ class WebformMultiAgent extends WebformCompositeBase {
           $composite_property_key = str_replace('#' . $composite_key . '__', '#', $property_key);
           $composite_element[$composite_property_key] = $property_value;
         }
-        elseif  (strpos($property_key, '#' . $key_mappings[$composite_key] . '__') === 0) {
+        elseif (isset($key_mappings[$composite_key]) && (strpos($property_key, '#' . $key_mappings[$composite_key] . '__') === 0)) {
           $composite_property_key = str_replace('#' . $key_mappings[$composite_key]  . '__', '#', $property_key);
           $composite_element[$composite_property_key] = $property_value;
         }
