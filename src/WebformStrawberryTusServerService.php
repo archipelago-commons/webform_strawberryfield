@@ -152,10 +152,7 @@ class WebformStrawberryTusServerService {
     $file_path = $tus_file->getFilePath();
 		$uuid = $tus_file->getKey();
     $metadata = $tus_file->details()['metadata'];
-		// Clear the temporary cache
-		/*$client = new \TusPhp\Tus\Client("/webform_strawberry/tus_upload/");
-		$client->setKey($uuid);
-		$client->delete($uuid); */
+
 
     // Check if the file already exists.
     $file_query = $this->entityTypeManager->getStorage('file')->getQuery();
@@ -176,7 +173,16 @@ class WebformStrawberryTusServerService {
       'filesize' => filesize($file_path),
     ]);
     $file->save();
-
+    // Clear the temporary cache
+    $client = new \TusPhp\Tus\Client('/webform_strawberry/tus_upload_complete');
+    if ($client) {
+      $client->setKey($uuid);
+      // Effectively purges the progress Cache, if any lingering.
+      $client->getCache()->delete($uuid);
+    }
+    else {
+      error_log('no client? mmmm');
+    }
 
     // Dispatch an event for other modules to act on.
     $event = new WebformStrawberryFieldTusUploadedEvent($file);

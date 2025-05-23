@@ -59,6 +59,11 @@
                 const parallelCountConfig= 1;
                 const url_string = drupalSettings.webform_strawberryfield.tus[webformkey].url.split('?')[0];
                 const token = drupalSettings.webform_strawberryfield.tus[webformkey]["X-CSRF-Token"];
+                let chunkSize = drupalSettings.webform_strawberryfield.tus[webformkey]["chunksize"];
+                if (!isNaN(chunkSize) || chunkSize == 0) {
+                  chunkSize = Number.POSITIVE_INFINITY
+                }
+
                 const endpoint = url_string;
                 const token_headers = {"X-CSRF-Token": token }
 
@@ -107,6 +112,7 @@
 
                   const options = {
                     endpoint: endpoint,
+                    chunkSize: chunkSize, //Number.POSITIVE_INFINITY,
                     retryDelays: [0, 1000, 3000],
                     headers: token_headers,
                     removeFingerprintOnSuccess: true,
@@ -128,6 +134,7 @@
                       reset()
                     },
                     onProgress(bytesUploaded, bytesTotal) {
+                      console.log(bytesUploaded);
                       const percentage = ((bytesUploaded / bytesTotal) * 100).toFixed(2)
                       progressBar.style.width = `${percentage}%`;
                       progressBar.style.color = 'white';
@@ -146,6 +153,10 @@
                       }
                       // For any other status code, tus-js-client should retry.
                       return true
+                    },
+                    onChunkComplete (chunkSize, bytesAccepted, bytesTotal) {
+                        console.log(chunkSize);
+                        console.log(bytesAccepted);
                     },
                     onSuccess(payload) {
                       const { lastResponse } = payload

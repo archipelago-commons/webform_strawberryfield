@@ -43,7 +43,7 @@ class WebformStrawberryTusCacheService extends AbstractCache {
   public function set(string $key, $value): void {
     // when setting we need to get the cache
     $data = $this->get($key);
-    if (!empty($data)) {
+    if (!empty($data) && is_array($data)) {
       foreach ($value as $k => $v) {
         $data[$k] = $v;
       }

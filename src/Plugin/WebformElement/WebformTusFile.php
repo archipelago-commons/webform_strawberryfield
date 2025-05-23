@@ -42,6 +42,7 @@ class WebformTusFile extends WebformManagedFileBase {
   protected function defineDefaultProperties() {
     $properties = parent::defineDefaultProperties();
     $properties['max_filesize_tus'] = '';
+    $properties['chunksize'] = 0;
     return $properties;
   }
 
@@ -193,6 +194,10 @@ class WebformTusFile extends WebformManagedFileBase {
 
     $element['#attached']['drupalSettings']['webform_strawberryfield']['tus'][$element['#webform_key']]['url'] =  $url->toString();
     $element['#attached']['drupalSettings']['webform_strawberryfield']['tus'][$element['#webform_key']]['X-CSRF-Token'] = $token;
+    $element['#attached']['drupalSettings']['webform_strawberryfield']['tus'][$element['#webform_key']]['chunksize'] = $element['#chunksize'] ?? 0;
+    if ($file_limit) {
+      $element['#attached']['drupalSettings']['webform_strawberryfield']['tus'][$element['#webform_key']]['file_limit'] = Bytes::toNumber($file_limit);
+    }
 
 
     // Add managed file upload tracking.
@@ -238,6 +243,18 @@ class WebformTusFile extends WebformManagedFileBase {
       '#max' => 10000,
       '#step' => 'any',
     ];
+
+    $form['file']['chunksize'] = [
+      '#type' => 'number',
+      '#title' => $this->t('Chunksize to be used by the TUS Clinet.'),
+      '#field_suffix' => $this->t('Bytes'),
+      '#description' => $this->t('A value of 0 (default and recommended) allows TUS decided. Only if you have issues upload files using PATCH, when e.g behind Cloudfare, you should use multiples of 256Kbytes (256000) to work around issues.'),
+      '#min' => 0,
+      '#max' => 52428800,
+      '#step' => 'any',
+    ];
+
+
     return $form;
 
   }

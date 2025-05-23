@@ -189,9 +189,14 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
   protected function getMetaValuesFromRequest(Request $request): array {
     $result = [];
     if ($metadata = $request->headers->get('upload-metadata')) {
-      foreach (explode(',', $metadata) as $piece) {
-        [$meta_name, $meta_value] = explode(' ', $piece);
-        $result[$meta_name] = base64_decode($meta_value);
+      $metadata_array = explode(',', $metadata);
+      foreach ($metadata_array as $piece) {
+        if (is_string($piece)) {
+          $metadata_pieces =  explode(' ', $piece);
+          if (isset($metadata_pieces[0]) && isset($metadata_pieces[1]) && is_string($metadata_pieces[1])) {
+            $result[$metadata_pieces[0]] = base64_decode($metadata_pieces[1]);
+          }
+        }
       }
     }
 
@@ -220,10 +225,7 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
 			$file_storage = $this->entityTypeManager()->getStorage('file');
 			/* @var $existing \Drupal\file\Entity\File[] */
 			$existing = $file_storage->loadByProperties(["uri" => $upload_location . '/' . $post_data['fileName']]);
-			/*$client = new \TusPhp\Tus\Client($request->getPathInfo());
-			$client->setKey($request->get('uuid'));
-      // Effectively purges the progress Cache, if any lingering.
-      $client->delete($request->get('uuid')); */
+
 			if ($existing) {
 				$file = reset($existing);
 			}
@@ -235,6 +237,11 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
 			$jsonResponse = new CacheableJsonResponse();
 			$jsonResponse->setMaxAge(10);
 			$jsonResponse->setData($response);
+      // And we delete here
+      $client = new \TusPhp\Tus\Client($request->getPathInfo());
+      $client->setKey($request->get('uuid'));
+      // Effectively purges the progress Cache, if any lingering.
+      $client->getCache()->delete($request->get('uuid'));
 			return $jsonResponse;
 		}
   	else {
