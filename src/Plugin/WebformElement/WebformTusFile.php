@@ -233,7 +233,7 @@ class WebformTusFile extends WebformManagedFileBase {
       '#title' => $this->t('Maximum file size when the User\'s browser is TUS capable.'),
       '#field_suffix' => $this->t('MB (Max: @filesize MB)', ['@filesize' => $max_filesize]),
       '#placeholder' => $max_filesize,
-      '#description' => $this->t('Enter the max file size a user may upload via TUS. Tus has no fileSize limit defined by PHP, given that i uploads using resumable chunks via JS. Still. You need to able to store the file! So keep it discrete.'),
+      '#description' => $this->t('Enter the max file size a user may upload via TUS. Tus has no fileSize limit defined by PHP, given that it uploads using resumable chunks via JS. Still. You need to able to store the file! So keep it discrete.'),
       '#min' => 1,
       '#max' => 10000,
       '#step' => 'any',

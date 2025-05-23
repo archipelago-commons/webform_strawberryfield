@@ -161,13 +161,14 @@
                       xhr.timeout = 8000; // time in milliseconds
                       try {
                         xhr.ontimeout = (e) => {
-                          if (window.confirm(`File Timeout: ${e.reason}\nDo you want to retry?`)) {
+                          if (window.alert(`File Timeout: ${e.reason}. Please try again`)) {
                             toggleBtn.disabled = false;
                             toggleBtn.textContent = Drupal.t('Pause upload');
-                            throw new Error("Drupal persistence failied");
+
+                            reset();
                           }
                           else {
-                            reset()
+                            reset();
                           }
                         };
 
@@ -193,11 +194,10 @@
                                 hidden_submit_button_for_file.dispatchEvent(mousedown);
                               }
                               else {
-                                if (window.alert(`Server could not find your File, might be busy or out of space: \nDo you want to retry?`)) {
+                                if (window.alert(`Server could not find your File, might be busy or out of space. Please try again.`)) {
                                   toggleBtn.disabled = false;
                                   toggleBtn.textContent = Drupal.t('Pause upload');
-                                  throw new Error("Drupal persistence failied");
-                                  return
+                                  reset();
                                 }
                                 else {
                                   $(input).data('webform-auto-file-upload', false);

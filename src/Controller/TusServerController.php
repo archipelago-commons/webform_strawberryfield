@@ -216,7 +216,6 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
 		if (($post_data['fileName'] ?? NULL) && ($request->get('uuid') ?? NULL)) {
 			// Not sure what to do with the $request->get('uuid') yet?
 			// Maybe use it If the first query call fails?
-			// @TODO change this to loadByProperty.
 			[$upload_location, $max_size] = $this->getUploadLocation($webform, $key, $request->get('uuid'));
 			$file_storage = $this->entityTypeManager()->getStorage('file');
 			/* @var $existing \Drupal\file\Entity\File[] */
