@@ -34,7 +34,11 @@
                 // And it is targeting ANY upload field. So we can't "omit" ourselves.
                 const $form = $($input.closest('form'));
                 let uploadIsRunning = false
+                const statusElement = $managed_file_wrapper.querySelector('.tus-status');
+                statusElement.classList.toggle('hidden');
+                statusElement.classList.toggle('visually-hidden');
                 const toggleBtn = $managed_file_wrapper.querySelector('.tus-btn')
+                const initial_button_text = toggleBtn.textContent;
                 const input = $input
                 $input.classList.toggle('hidden');
                 $input.classList.toggle('visually-hidden');
@@ -42,10 +46,6 @@
                 const hidden_submit_button_for_file = $managed_file_wrapper.querySelector('.js-form-submit[data-drupal-selector$="upload-button"]');
                 const progress = $managed_file_wrapper.querySelector('.tus-progress')
                 const progressBar = progress.querySelector('.tus-bar')
-                progressBar.style.minHeight = '1rem';
-                progressBar.style.maxHeight = '1rem';
-                progressBar.style.height = '1rem';
-                progressBar.style.backgroundColor = 'blue';
                 progressBar.style.width = '0px';
                 progressBar.style.textAlign = 'center';
                 progressBar.style.overflow = 'hidden';
@@ -60,17 +60,33 @@
                 const url_string = drupalSettings.webform_strawberryfield.tus[webformkey].url.split('?')[0];
                 const token = drupalSettings.webform_strawberryfield.tus[webformkey]["X-CSRF-Token"];
                 let chunkSize = drupalSettings.webform_strawberryfield.tus[webformkey]["chunksize"];
+                let filelimit = 0;
+                if (drupalSettings.webform_strawberryfield.tus[webformkey].hasOwnProperty("file_limit")) {
+                  filelimit = drupalSettings.webform_strawberryfield.tus[webformkey]["file_limit"];
+                  if (!isNaN(filelimit)) {
+                    const existing_file_count = hidden_input_for_files.value.split(' ').length;
+                    if (existing_file_count >= Number.parseInt(filelimit)) {
+                      // This is only visual, the File Validators already block any extra files to be uploaded
+                      toggleBtn.classList.toggle('form-disabled');
+                    }
+                  }
+                }
+
+                  //hidden_input_for_files.value
+
                 if (!isNaN(chunkSize) || chunkSize == 0) {
                   chunkSize = Number.POSITIVE_INFINITY
                 }
 
                 const endpoint = url_string;
                 const token_headers = {"X-CSRF-Token": token }
-
+                // Reset really makes not much sense since this whole thing will
+                // be reloaded via ajax, but if that takes time it gives the user
+                // A little bit of feedback
                 function reset() {
                   input.value = ''
                   progressBar.style.width = '0px';
-                  toggleBtn.textContent = Drupal.t("Start upload");
+                  toggleBtn.textContent = Drupal.t(initial_button_text);
                   toggleBtn.disabled = false;
                   upload = null
                   uploadIsRunning = false
@@ -84,7 +100,7 @@
                     text += `[${index}] ${previousUpload.creationTime}\n`
                   })
                   text +=
-                    '\nEnter the corresponding number to resume an upload or press Cancel to start a new upload'
+                    '\nEnter the corresponding number (between [ brackets ] ) to resume an upload or press Cancel to start a new upload.'
 
                   const answer = prompt(text)
                   const index = Number.parseInt(answer, 10)
@@ -175,7 +191,6 @@
                           if (window.alert(`File Timeout: ${e.reason}. Please try again`)) {
                             toggleBtn.disabled = false;
                             toggleBtn.textContent = Drupal.t('Pause upload');
-
                             reset();
                           }
                           else {
@@ -194,11 +209,20 @@
                                   hidden_input_for_files.value = previous_fids.join(" ");
                                   // Now we want to decrease the "don't submit thing webform managed JS applies
                                 }
+
                                 // Track file upload. Sadly All Jquery bc of webform module.
                                 $(input).data('webform-auto-file-upload', false);
                                 let fileUploads = ($form.data('webform-auto-file-uploads') || 0);
                                 $form.data('webform-auto-file-uploads', fileUploads - 1);
                                 toggleBtn.disabled = false;
+                                if (!isNaN(filelimit)) {
+                                  if (previous_fids.length >= Number.parseInt(filelimit)) {
+                                    // This is only visual, the File Validators already block any extra files to be uploaded
+                                    toggleBtn.classList.toggle('form-disabled');
+                                    toggleBtn.disabled = true;
+                                    once.remove('tus_attache', '#' + $managed_file_wrapper.id);
+                                  }
+                                }
                                 reset();
                                 // Submit the form so we can reload with the proper file size/preview links etc.
                                 var mousedown = new Event('mousedown');

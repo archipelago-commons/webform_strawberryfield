@@ -156,18 +156,20 @@ class WebformTusFile extends WebformManagedFileBase {
       $element = $container;
     }
     // Add the TUS basic interface
-
-    // This should just go into the theme preprocess function.
+    // We make it initially hidden, that way, when the cap/limit is reached
+    // we don't need to initialize the TUS JS client code at all. It stays hidden
+    // How do we know? process function will remove the input[type=file]
+    // and thus our JS will not kick on the once.
     $element['status'] = [
       '#markup' => '
-			  <div class="row">
+			  <div class="tus-status hidden visually-hidden">
           <div class="progress progress-striped progress-success tus-progress">
-            <div class="bar tus-bar" style="width: 0%;height:1rem;background-color:cornflowerblue"></div>
+            <div class="bar tus-bar" style="width:0%"></div>
           </div>
-          <span class="btn button stop tus-btn">Start upload</span>
-      </div>
-      <h3>Uploads</h3>
-      <p class="tus-upload-list"></p>'
+          <span class="btn button stop tus-btn w-auto">Chose a file to start an upload</span>
+        </div>
+      <div class="tus-upload-list"></div>',
+      '#weight' => 10,
     ];
 
     // Allow ManagedFile Ajax callback to disable flexbox wrapper.
@@ -195,9 +197,8 @@ class WebformTusFile extends WebformManagedFileBase {
     $element['#attached']['drupalSettings']['webform_strawberryfield']['tus'][$element['#webform_key']]['url'] =  $url->toString();
     $element['#attached']['drupalSettings']['webform_strawberryfield']['tus'][$element['#webform_key']]['X-CSRF-Token'] = $token;
     $element['#attached']['drupalSettings']['webform_strawberryfield']['tus'][$element['#webform_key']]['chunksize'] = $element['#chunksize'] ?? 0;
-    if ($file_limit) {
-      $element['#attached']['drupalSettings']['webform_strawberryfield']['tus'][$element['#webform_key']]['file_limit'] = Bytes::toNumber($file_limit);
-    }
+    $element['#attached']['drupalSettings']['webform_strawberryfield']['tus'][$element['#webform_key']]['file_limit'] = $element['#multiple'] ?? 0;
+
 
 
     // Add managed file upload tracking.
@@ -246,9 +247,9 @@ class WebformTusFile extends WebformManagedFileBase {
 
     $form['file']['chunksize'] = [
       '#type' => 'number',
-      '#title' => $this->t('Chunksize to be used by the TUS Clinet.'),
+      '#title' => $this->t('Chunksize to be used by the TUS Client.'),
       '#field_suffix' => $this->t('Bytes'),
-      '#description' => $this->t('A value of 0 (default and recommended) allows TUS decided. Only if you have issues upload files using PATCH, when e.g behind Cloudfare, you should use multiples of 256Kbytes (256000) to work around issues.'),
+      '#description' => $this->t('A value of 0 (default and recommended) allows TUS decided. Only if you have issues upload files using PATCH, when e.g behind Cloudfare, you could use multiples of 256Kbytes (256000) to work around those issues.'),
       '#min' => 0,
       '#max' => 52428800,
       '#step' => 'any',
