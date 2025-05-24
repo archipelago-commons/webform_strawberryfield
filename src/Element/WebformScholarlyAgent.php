@@ -12,10 +12,40 @@ use Drupal\webform\Utility\WebformElementHelper;
 /**
  * Provides a webform element for a LoC based Agents with Roles.
  *
- * @FormElement("webform_metadata_multiagent")
+ * @FormElement("webform_metadata_scholarly_agent")
  */
-class WebformMultiAgent extends WebformCompositeBase {
+class WebformScholarlyAgent extends WebformCompositeBase {
 
+
+  public const LOCAL_ROLE_OPTIONS = [
+    'ContactPerson' =>  'Contact Person',
+    'DataCollector' => 'Data Collector',
+    'DataCurator' => 'Data Curator',
+    'DataManager' => 'Data Manager',
+    'Scholar' => 'Scholar',
+    'Student' => 'Student',
+    'Editor' => 'Editor',
+    'Producer' => 'Producer',
+    'Author' => 'Author',
+    'PrimaryAuthor' => 'Primary Author',
+    'CoAuthor' => 'Co-author',
+    'ProjectLeader' => 'Project Leader',
+    'ProjectManager' => 'Project Manager',
+    'ProjectMember' =>  'Project Member',
+    'RelatedPerson' => 'Relate Person',
+    'Researcher' => 'Researcher',
+    'RightsHolder' => 'Rights Holder',
+    'Sponsor' => 'Sponsor',
+    'Supervisor' => 'Supervisor',
+    'WorkPackageLeader' => 'Work Package Leader',
+    'Other' => 'Other',
+  ];
+
+  public const AGENT_TYPES = [
+        'corporate' => 'Corporate',
+        'personal' => 'Personal',
+        'family' => 'Family'
+      ];
   /**
    * {@inheritdoc}
    */
@@ -33,6 +63,14 @@ class WebformMultiAgent extends WebformCompositeBase {
         '#agent_type' => 'agent_type',
         '#role_label' => 'role_label',
         '#role_uri' => 'role_uri',
+        '#identifier_orcid' => 'identifier_orcid',
+        '#affiliation' => 'affiliation',
+        '#affiliation_url' => 'affiliation_url',
+        '#graduation_year' => 'graduation_year',
+        '#local_role' => 'local_role',
+        '#vocab_affiliation' => 'names',
+        '#rdftype_affiliation' => 'CorporateName',
+        '#agent_type_options' =>  ['personal'],
       ];
     return $info;
   }
@@ -42,6 +80,11 @@ class WebformMultiAgent extends WebformCompositeBase {
    */
   public static function getCompositeElements(array $element) {
     $elements = [];
+
+    // Roles from https://datacite-metadata-schema.readthedocs.io/en/4.5/appendices/appendix-1/contributorType/
+    // With extras
+    $local_role_options = static::LOCAL_ROLE_OPTIONS;
+
     // This god forsaken function gets called many many times
     // and it gets more and more data everytime!
     // Why? We may never know
@@ -51,6 +94,9 @@ class WebformMultiAgent extends WebformCompositeBase {
     $rdftype_personal_name = 'thing';
     $role_type = 'loc';
 
+    $vocab_affiliation = 'names';
+    $rdftype_affiliation = 'thing';
+
     $name_label_key = $element['#name_label'] ?? 'name_label';
     $name_uri_key = $element['#name_uri'] ?? 'name_uri';
     $name_label_key = trim($name_label_key);
@@ -59,6 +105,11 @@ class WebformMultiAgent extends WebformCompositeBase {
     $agent_type_key = trim($agent_type_key);
     $role_label_key = $element['#role_label'] ?? 'role_label';
     $role_uri_key = $element['#role_uri'] ?? 'role_uri';
+    $identifier_orcid_key = $element['#identifier_orcid'] ?? 'identifier_orcid';
+    $affiliation_key = $element['#affiliation'] ?? 'affiliation';
+    $affiliation_uri_key = $element['#affiliation_uri'] ?? 'affiliation_uri';
+    $graduation_year_key = $element['#graduation_year'] ?? 'graduation_year';
+    $local_role_key = $element['#local_role'] ?? 'local_role';
 
     if (isset($element['#vocab_personal_name'])) {
       $vocab_personal_name = $element['#vocab_personal_name'];
@@ -67,9 +118,25 @@ class WebformMultiAgent extends WebformCompositeBase {
       $rdftype_personal_name = trim($element['#rdftype_personal_name']);
     }
 
+    if (isset($element['#vocab_affiliation'])) {
+      $vocab_affiliation = $element['#vocab_affiliation'];
+    }
+    if (($vocab_affiliation == 'rdftype') && isset($element['#rdftype_affiliation'])) {
+      $rdftype_affiliation = trim($element['#rdftype_affiliation']);
+    }
+
     if (isset($element['#role_type'])) {
       $role_type = $element['#role_type'];
     }
+
+    $agent_type_options = static::AGENT_TYPES;
+    $selectedagent_type_options = $element['#agent_type_options'] ?? ['personal'];
+    foreach ($agent_type_options as $key => $option) {
+      if (!in_array($key, $selectedagent_type_options)) {
+        unset($agent_type_options[$key]);
+      }
+    }
+
 
     $elements[$agent_type_key] = [
       '#type' => 'select',
@@ -78,15 +145,12 @@ class WebformMultiAgent extends WebformCompositeBase {
       '#description' => $element['#agent_type__description'] ?? '',
       '#help' => $element['#agent_type__help'] ?? '',
       '#required' => $element['#agent_type__required'] ?? FALSE,
+      '#empty_option' => t('- Please select one -'),
       '#attributes' => [
         'data-source-strawberry-autocomplete-key' => $name_label_key,
       ],
-      '#options' => [
-        'corporate' => 'Corporate',
-        'personal' => 'Personal',
-        'family' => 'Family'
-      ],
-      '#default_value' => 'personal'
+      '#options' => $agent_type_options,
+      '#default_value' => reset($agent_type_options),
     ];
 
     $elements[$name_label_key] = [
@@ -153,8 +217,88 @@ class WebformMultiAgent extends WebformCompositeBase {
       '#other__placeholder' => $element['#role_uri__placeholder'] ?? '',
       '#attributes' => ['data-strawberry-autocomplete-value' => TRUE]
     ];
+
+    $elements[$identifier_orcid_key] = [
+      '#type' => 'textfield',
+      '#title' => $element['#identifier_orcid__title'] ?? t('ORCID'),
+      '#title_display' => $element['#identifier_orcid__title_display'] ?? 'before',
+      '#description' => $element['#identifier_orcid__description'] ?? '',
+      '#help' => $element['#identifier_orcid__help'] ?? '',
+      '#required' => $element['#identifier_orcid__required'] ?? FALSE,
+      '#other__placeholder' => $element['#identifier_orcid__placeholder'] ?? '',
+      '#autocomplete_route_name' => 'webform_strawberryfield.auth_autocomplete',
+      '#autocomplete_route_parameters' => [
+        'auth_type' => 'orcid',
+        'vocab' => 'orcid',
+        'rdftype' => 'thing',
+        'match' => 'exact',
+        'count' => 10
+      ],
+      '#attributes' => [
+        'data-source-strawberry-autocomplete-key' => $identifier_orcid_key,
+        'data-target-strawberry-autocomplete-key' => $identifier_orcid_key,
+        'data-strawberry-autocomplete-value' => TRUE
+      ],
+    ];
+
+    $elements[$affiliation_key] = [
+      '#type' => 'textfield',
+      '#title' => $element['#affiliation__title'] ?? t('Affiliation'),
+      '#title_display' => $element['#affiliation__title_display'] ?? 'before',
+      '#description' => $element['#affiliation__description'] ?? '',
+      '#help' => $element['#affiliation__help'] ?? '',
+      '#required' => $element['#affiliation__required'] ?? FALSE,
+      '#other__placeholder' => $element['#affiliation__placeholder'] ?? '',
+      '#autocomplete_route_name' => 'webform_strawberryfield.auth_autocomplete',
+      '#autocomplete_route_parameters' => [
+        'auth_type' => 'loc',
+        'vocab' => $vocab_affiliation,
+        'rdftype' => $rdftype_affiliation,
+        'count' => 10
+      ],
+      '#attributes' => [
+        'data-source-strawberry-autocomplete-key' => $affiliation_key,
+        'data-target-strawberry-autocomplete-key' => $affiliation_uri_key
+      ],
+    ];
+    $elements[$affiliation_uri_key] = [
+      '#type' => 'url',
+      '#title' => $element['#affiliation_uri__title'] ?? t('Affiliation URL'),
+      '#title_display' => $element['#affiliation_uri__title_display'] ?? 'before',
+      '#description' => $element['#affiliation_uri__description'] ?? '',
+      '#help' => $element['#affiliation_uri__help'] ?? '',
+      '#required' => $element['#affiliation_uri__required'] ?? FALSE,
+      '#other__placeholder' => $element['#affiliation_uri__placeholder'] ?? '',
+      '#attributes' => ['data-strawberry-autocomplete-value' => TRUE]
+    ];
+    $elements[$graduation_year_key] = [
+      '#type' => 'number',
+      '#min' => 1900,
+      '#max' => 2046, // Eastern egg/movie :)
+      '#step' => 1,
+      '#title' => $element['#graduation_year__title'] ?? t('Graduation Year'),
+      '#title_display' => $element['#graduation_year__title_display'] ?? 'before',
+      '#description' => $element['#graduation_year__description'] ?? '',
+      '#help' => $element['#graduation_year__help'] ?? '',
+      '#required' => $element['#graduation_year__required'] ?? FALSE,
+      '#other__placeholder' => $element['#graduation_year__placeholder'] ?? '',
+    ];
+    $elements[$local_role_key] = [
+      '#type' => 'select',
+      '#options' => $local_role_options,
+      '#title' => $element['#local_role__title'] ?? t('Local Role'),
+      '#title_display' => $element['#local_role__title_display'] ?? 'before',
+      '#description' => $element['#local_role__description'] ?? '',
+      '#help' => $element['#local_role__help'] ?? '',
+      '#required' => $element['#local_role__required'] ?? FALSE,
+      '#other__placeholder' => $element['#local_role__placeholder'] ?? '',
+    ];
+
     $elements[$name_label_key]['#process'][] = [$class, 'processAutocomplete'];
     $elements[$role_label_key]['#process'][] = [$class, 'processAutocomplete'];
+    // Future Note. Processing break the self/autocomplete for ORCID
+    //$elements[$identifier_orcid_key]['#process'][] = [$class, 'processAutocomplete'];
+    $elements[$affiliation_key]['#process'][] = [$class, 'processAutocomplete'];
     return $elements;
   }
 
@@ -206,7 +350,7 @@ class WebformMultiAgent extends WebformCompositeBase {
 
     $element = parent::processWebformComposite($element, $form_state, $complete_form);
 
-    $class = '\Drupal\webform_strawberryfield\Element\WebformMultiAgent';
+    $class = '\Drupal\webform_strawberryfield\Element\WebformScholarlyAgent';
 
     $unique_id = $element['#webform_id'] . implode('-', $element['#parents']);
 
@@ -223,6 +367,7 @@ class WebformMultiAgent extends WebformCompositeBase {
     $agent_type_key = trim($agent_type_key);
     $role_label_key = $element['#role_label'] ?? 'role_label';
     $role_uri_key = $element['#role_uri'] ?? 'role_uri';
+    $identifier_orcid_key = $element['#$identifier_orcid'] ?? '$identifier_orcid';
 
     $element[$agent_type_key]['#ajax'] = $ajax;
 
@@ -351,11 +496,16 @@ class WebformMultiAgent extends WebformCompositeBase {
     // Because this is called recursively, chances are the key mappings won't exist
     // at deeper levels, so we check with an isset().
     $key_mappings = [
-      trim($element['#name_label'] ?? '') ?? 'name_label '=> 'name_label',
-      trim($element['#name_uri'] ?? '') ?? 'name_uri' => 'name_uri',
-      trim($element['#agent_type'] ?? '') ?? 'agent_type' => 'agent_type',
-      trim($element['#role_label'] ?? '') ?? 'role_label' =>  'role_label',
-      trim($element['#role_uri'] ?? '') ?? 'role_uri' => 'role_uri',
+        trim($element['#name_label'] ?? '') ?? 'name_label '=> 'name_label',
+        trim($element['#name_uri'] ?? '') ?? 'name_uri' => 'name_uri',
+        trim($element['#agent_type'] ?? '') ?? 'agent_type' => 'agent_type',
+        trim($element['#role_label'] ?? '') ?? 'role_label' =>  'role_label',
+        trim($element['#role_uri'] ?? '') ?? 'role_uri' => 'role_uri',
+        trim($element['#identifier_orcid'] ?? '') ?? 'identifier_orcid' => 'identifier_orcid',
+        trim($element['#affiliation'] ?? '') ?? 'affiliation' => 'affiliation',
+        trim($element['#affiliation_url'] ?? '') ?? 'affiliation_url' => 'affiliation_url',
+        trim($element['#graduation_year'] ?? '') ?? 'graduation_year' => 'graduation_year',
+        trim($element['#local_role'] ?? '') ?? 'local_role' => 'local_role',
     ];
     // $composite_elements already holds the new keys
     foreach ($composite_elements as $composite_key => &$composite_element) {

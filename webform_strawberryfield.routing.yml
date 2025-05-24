@@ -80,3 +80,37 @@ webform_strawberryfield.rowsbylabel.autocomplete:
     _entity_access: 'node.view'
     _permission: 'access content'
     _csrf_token: 'TRUE'
+webform_strawberryfield.tus.upload:
+  path: '/webform_strawberry/tus_upload/{webform}/{key}/{uuid}'
+  methods: [ GET, POST, PATCH, HEAD, OPTIONS, DELETE ]
+  defaults:
+    _controller: '\Drupal\webform_strawberryfield\Controller\TusServerController::uploadToWebform'
+    _title: 'Tus Upload'
+    uuid: ''
+  options:
+    parameters:
+      webform:
+        type: 'entity:webform'
+    no_cache: TRUE
+  requirements:
+    uuid: '[a-zA-Z0-9\-]+'
+    _entity_access: 'webform.submission_create'
+    _custom_access: 'Drupal\webform_strawberryfield\Access\TusUploadAccess:checkAccess'
+    _csrf_request_header_token: 'TRUE'
+
+webform_strawberryfield.tus.upload_complete:
+  path: '/webform_strawberry/tus_upload_complete/{webform}/{key}/{uuid}'
+  defaults:
+    _controller: '\Drupal\webform_strawberryfield\Controller\TusServerController::uploadToWebformComplete'
+    _title: 'Tus Upload complete'
+  methods: [POST]
+  requirements:
+    _format: 'json'
+    _entity_access: 'webform.submission_create'
+    _custom_access: '\Drupal\webform_strawberryfield\Access\TusUploadAccess:checkAccess'
+    _csrf_request_header_token: 'TRUE'
+    uuid: '[a-zA-Z0-9\-]+'
+  options:
+    no_cache: TRUE
+    webform:
+      type: 'entity:webform'
