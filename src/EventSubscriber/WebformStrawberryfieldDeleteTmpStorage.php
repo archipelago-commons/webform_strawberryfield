@@ -47,6 +47,11 @@ class WebformStrawberryfieldDeleteTmpStorage implements EventSubscriberInterface
   protected $tempStoreFactory;
 
   /**
+   * @var \Drupal\Core\Logger\LoggerChannelFactoryInterface
+   */
+  private LoggerChannelFactoryInterface $loggerFactory;
+
+  /**
    * StrawberryfieldEventInsertSubscriberDepositDO constructor.
    *
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
