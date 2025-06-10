@@ -335,7 +335,7 @@ class StrawberryRunnerModalController extends ControllerBase {
   public static function validateDataAgainstWebformElements(array $elements_in_data, array &$data, array &$error_elements_why): array {
     // In case the saved data is "single valued" for a key
     // But the corresponding webform element is not
-    // we cast to it multi valued so it can be read/updated
+    // we cast to it multivalued, so it can be read/updated
     // If the element itself does not allow multiple, is not a composite and we are passing an indexed array
     // we need to re-write data (take the first) to avoid a Render array error in Drupal 10.3
     // But also tell the user this form is not safe to use.
@@ -371,7 +371,8 @@ class StrawberryRunnerModalController extends ControllerBase {
         }
         else {
           // count the values. The Element count might be lower than the source data
-          if (count($data['data'][$key]) > (int) $elements_in_datum['#webform_multiple']) {
+          // Unlimited has $elements_in_datum['#webform_multiple'] = TRUE
+          if (($elements_in_datum['#webform_multiple'] ?? FALSE) !== TRUE && (count($data['data'][$key]) > (int) $elements_in_datum['#webform_multiple'])) {
             $error_elements_why[$key] = t('@key contains @count which is larger than the multiple values limit of @max for <em>@element_name</em>' , [
               '@key' => $key,
               '@count' => count($data['data'][$key]) . " entries ",
