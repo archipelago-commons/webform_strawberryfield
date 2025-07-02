@@ -352,14 +352,26 @@ class StrawberryRunnerModalController extends ControllerBase {
             $current_source_subkeys = array_keys($data['data'][$key]);
             $element_subkeys = array_keys($elements_in_datum['#webform_composite_elements']);
             // OK if element has more/less. Not OK if the source data has other/more.
-            if (count(array_diff($current_source_subkeys, $element_subkeys))) {
-              $diff = array_diff($current_source_subkeys, $element_subkeys);
-              $error_elements_why[$key] = t('@key contains @property not available for <em>@element_name</em>' , [
-                    '@key' => $key,
-                    '@property' => (count($diff) > 1 ? "properties " : "property ") . implode (",", $diff),
-                    '@element_name' => $elements_in_datum['#title'] ?? $key,
-              ]);
-              $error_elements[$key] = $data['data'][$key];
+            $diff = array_diff($current_source_subkeys, $element_subkeys);
+            if (count($diff)) {
+              foreach ($diff as $index => $propery_not_present) {
+                // Don't complain if empty ... we won't lose anything.
+                if ($data['data'][$key][$propery_not_present] === "" or $data['data'][$key][$propery_not_present] === NULL) {
+                  unset($diff[$index]);
+                }
+              }
+              $diff = array_values($diff);
+              if (count($diff)) {
+                $error_elements_why[$key] = t('@key contains @property not available for <em>@element_name</em>', [
+                  '@key' => $key,
+                  '@property' => (count($diff) > 1 ? "properties " : "property ") . implode(",", $diff),
+                  '@element_name' => $elements_in_datum['#title'] ?? $key,
+                ]);
+                $error_elements[$key] = $data['data'][$key];
+              }
+              else {
+                $data['data'][$key] = [$data['data'][$key]];
+              }
             }
             else {
               $data['data'][$key] = [$data['data'][$key]];
@@ -387,12 +399,18 @@ class StrawberryRunnerModalController extends ControllerBase {
         // Not a multiple element. So check what we are getting here.
         if (is_array($data['data'][$key]) && !empty($data['data'][$key])) {
           if (array_is_list($data['data'][$key])) {
-            // Make an exception for "one" count and "entity_autocomplete"
             if ($elements_in_datum['#webform_plugin_id'] == "entity_autocomplete" && count($data['data'][$key]) == 1) {
               // Do nothing. We accept this bc the element actually can load a single entry array.
             }
             elseif ($elements_in_datum['#webform_plugin_id'] == "webform_metadata_panoramatour") {
               // Do nothing. We accept this bc webform panorama tour builder is a special computed/complex field.
+            }
+            elseif (str_ends_with($elements_in_datum['#webform_plugin_id'], '_file') && count($data['data'][$key]) == 1) {
+              // Do nothing for Files.
+            }
+            elseif (count($data['data'][$key]) == 1) {
+              // Take the first entry/cast it to a single entry.
+              $data['data'][$key] = $data['data'][$key][0];
             }
             else {
               // Multiple entries for a single valued element. Bad.
@@ -409,14 +427,23 @@ class StrawberryRunnerModalController extends ControllerBase {
               $current_source_subkeys = array_keys($data['data'][$key]);
               $element_subkeys = array_keys($elements_in_datum['#webform_composite_elements']);
               // OK if element has more/less. Not OK if the source data has other/more.
-              if (count(array_diff($current_source_subkeys, $element_subkeys))) {
-                $diff = array_diff($current_source_subkeys, $element_subkeys);
-                $error_elements_why[$key] = t('@key contains @property not available for <em>@element_name</em>' , [
-                  '@key' => $key,
-                  '@property' => (count($diff) > 1 ? "properties " : "property ") . implode (",", $diff),
-                  '@element_name' => $elements_in_datum['#title'] ?? $key,
-                ]);
-                $error_elements[$key] = $data['data'][$key];
+              $diff = array_diff($current_source_subkeys, $element_subkeys);
+              if (count($diff)) {
+                foreach ($diff as $index => $propery_not_present) {
+                  // Don't complain if empty ... we won't lose anything.
+                  if ($data['data'][$key][$propery_not_present] === "" or $data['data'][$key][$propery_not_present] === NULL) {
+                    unset($diff[$index]);
+                  }
+                }
+                $diff = array_values($diff);
+                if (count($diff)) {
+                  $error_elements_why[$key] = t('@key contains @property not available for <em>@element_name</em>', [
+                    '@key' => $key,
+                    '@property' => (count($diff) > 1 ? "properties " : "property ") . implode(",", $diff),
+                    '@element_name' => $elements_in_datum['#title'] ?? $key,
+                  ]);
+                  $error_elements[$key] = $data['data'][$key];
+                }
               }
             }
           }
