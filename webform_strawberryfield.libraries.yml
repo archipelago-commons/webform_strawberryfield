@@ -39,9 +39,25 @@ scenebuilder_pannellum_strawberry:
 webform_strawberryfield.element.metadatadate:
   version: VERSION
   js:
+    js/modernizr-custom.js : {minified: true}
     js/webform_strawberryfield.element.metadatadate.js: {}
   dependencies:
     - jquery_ui_datepicker/datepicker
     - core/drupalSettings
     - core/once
 
+webform_strawberryfield.tus:
+  version: 4.0
+  js:
+    https://cdn.jsdelivr.net/npm/tus-js-client@latest/dist/tus.min.js: { external: true, minified: true, preprocess: false}
+
+webform_strawberryfield.tus_integration:
+  js:
+    js/webform_strawberryfield-tus.js: {minified: false}
+  css:
+    component:
+      css/webform_strawberryfield-tus.css: { }
+  dependencies:
+    - core/drupalSettings
+    - core/once
+    - webform_strawberryfield/webform_strawberryfield.tus

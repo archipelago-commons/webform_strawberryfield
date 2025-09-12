@@ -10,6 +10,14 @@ To be able to use the Europeana Suggester edit your Drupal `settings.php` file (
 $settings['webform_strawberryfield.europeana_entity_apikey'] = 'thekey';
 ```
 
+Also, nominatim (Georeference from open Streetmaps) requires a valid/non generic User Agent to be passed. The default value, when not set
+is `Archipelago Commons Repository/1.x at info@metro.org`. Same as with europeana, edit your Drupal `settings.php` file and set one based on the example. 
+We encourage you to please edit this and not run in production with the default one, to avoid blocking others in the future it you exceed your requests.
+
+```PHP
+$settings['webform_strawberryfield.nominatim_user_agent'] = "Archipelago Commons Repository/1.5 at your@email / sitename";
+```
+
 Save and clear caches.
 
 In its current state the Europeana Entity API (Alpha 0.10.3) as of December 2021 uses a static APIKEY (not the same as other APIs) and can be requested at https://pro.europeana.eu/page/get-api

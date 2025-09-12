@@ -17,6 +17,7 @@ use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Field\WidgetBase;
+use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Url;
 use Drupal\node\Entity\Node;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -25,6 +26,7 @@ use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\strawberryfield\Semantic\ActivityStream;
 use Drupal\webform\Entity\Webform;
+use Drupal\webform_strawberryfield\Controller\StrawberryRunnerModalController;
 
 /**
  * Plugin implementation of the 'strawberryfield_webform_inline_widget' widget.
@@ -45,6 +47,16 @@ class StrawberryFieldWebFormInlineWidget extends WidgetBase implements Container
    */
   protected $currentUser;
 
+
+  protected $errorElements = [];
+
+  /**
+   * The renderer.
+   *
+   * @var \Drupal\Core\Render\RendererInterface
+   */
+  protected $renderer;
+
   /**
    *  Constructs a StrawberryFieldWebFormWidget.
    *
@@ -60,9 +72,11 @@ class StrawberryFieldWebFormInlineWidget extends WidgetBase implements Container
    *   Any third party settings.
    * @param \Drupal\Core\Session\AccountProxyInterface $currentuser
    */
-  public function __construct($plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, array $third_party_settings, AccountProxyInterface $currentuser) {
+  public function __construct($plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, array $third_party_settings, AccountProxyInterface $currentuser, RendererInterface $renderer) {
     parent::__construct($plugin_id, $plugin_definition, $field_definition, $settings, $third_party_settings);
     $this->currentUser = $currentuser;
+    $this->errorElements = [];
+    $this->renderer = $renderer;
   }
 
   /**
@@ -80,7 +94,8 @@ class StrawberryFieldWebFormInlineWidget extends WidgetBase implements Container
       $configuration['field_definition'],
       $configuration['settings'],
       $configuration['third_party_settings'],
-      $container->get('current_user')
+      $container->get('current_user'),
+      $container->get('renderer')
     );
   }
 
@@ -372,24 +387,23 @@ class StrawberryFieldWebFormInlineWidget extends WidgetBase implements Container
 
       $data['data'] = $data_defaults + json_decode($stored_value, TRUE);
 
-      // In case the saved data is "single valued" for a key
-      // But the corresponding webform element is not
-      // we cast to it multi valued so it can be read/updated
       /* @var \Drupal\webform\WebformInterface $my_webform */
       $webform_elements = $my_webform->getElementsInitializedFlattenedAndHasValue();
       $elements_in_data = array_intersect_key($webform_elements, $data['data']);
+      // In case the saved data is "single valued" for a key
+      // But the corresponding webform element is not
+      // we cast to it multivalued so it can be read/updated
+      // If the element itself does not allow multiple, is not a composite and we are passing an indexed array
+      // we need to re-write data (take the first) to avoid a Render array error in Drupal 10.3
+      // But also tell the user this form is not safe to use.
+      $error_elements_why = [];
+      $error_elements = $this->errorElements ?? [];
       if (is_array($elements_in_data) && count($elements_in_data) > 0) {
-        foreach ($elements_in_data as $key => $elements_in_datum) {
-          if (isset($elements_in_datum['#webform_multiple']) &&
-            $elements_in_datum['#webform_multiple'] !== FALSE) {
-            //@TODO should we log this operation for admins?
-            $data['data'][$key] = (array) $data['data'][$key];
-            if (!array_is_list($data['data'][$key])) {
-              $data['data'][$key] = [ $data['data'][$key] ];
-            }
-          }
-        }
+        $error_elements = StrawberryRunnerModalController::validateDataAgainstWebformElements($elements_in_data, $data, $error_elements_why);
       }
+      $this->errorElements = $error_elements;
+
+      $data['data']['strawberry_field_invalid_elements'] = $error_elements;
     }
 
 
@@ -469,6 +483,33 @@ class StrawberryFieldWebFormInlineWidget extends WidgetBase implements Container
       ];
     }
 
+    if (count($this->errorElements ?? [])) {
+      $build = [
+        'message' => [
+          '#type' => 'markup',
+          '#markup' => $this->t('This Webform can not edit/save correctly all the data present in your ADO. Some elements are going to be disabled to avoid data loss. Please correct either the data (if this is a one-of) or your Webform. ')
+        ],
+        'link' => [
+          '#type' => 'link',
+          '#title' => $this->t(' Click here to edit and fix your Webform', ['%title' => $my_webform->label()]),
+          '#url' => Url::fromRoute('entity.webform.edit_form', [
+            'webform' => $my_webform->id(),
+          ]),
+          '#attributes' => ['target' => '_blank'],
+        ],
+        'details' => [
+          '#type' => 'item',
+          'list' => [
+            '#theme' => 'item_list',
+            '#items' =>
+              array_values($error_elements_why),
+          ],
+        ]
+      ];
+      $this->messenger()->addWarning($this->renderer->renderPlain($build));
+    }
+
+
     // The following elements are kinda hidden and match the field properties
     $current_value = $items[$delta]->getValue();
 
@@ -535,6 +576,8 @@ class StrawberryFieldWebFormInlineWidget extends WidgetBase implements Container
     $tempstoreId = $form_state->get('strawberryfield_webform_widget_id');
     /** @var \Drupal\Core\TempStore\PrivateTempStore $tempstore */
     $tempstore = \Drupal::service('tempstore.private')->get('archipel');
+
+
     if ($tempstore->getMetadata($tempstoreId) == NULL) {
       // Means its empty. This can be Ok if something else than "save"
       // Is triggering the Ajax Submit action like the "Display Switch"
@@ -565,6 +608,18 @@ class StrawberryFieldWebFormInlineWidget extends WidgetBase implements Container
     $json = json_decode($json_string, TRUE);
     $json_error = json_last_error();
     if ($json_error == JSON_ERROR_NONE) {
+      // In case for some reason the class is reset and we loose $this->errorElements we can still use the passed
+      // $json['strawberry_field_invalid_elements'] to the Webform Harvester handler and never removed.
+      $error_elements =  $this->errorElements  ?? ($json['strawberry_field_invalid_elements'] ?? []);
+      if (count($error_elements)) {
+        foreach ($error_elements as $key => $value) {
+          $json[$key] = $value;
+        }
+        unset($json['strawberry_field_invalid_elements']);
+        // restore the original values.
+        $json_string = json_encode($json);
+      }
+
       $form_state->setValueForElement($element['strawberry_webform_widget']['json'], $json_string);
       // Let tempstore entry expire or be removed by \Drupal\webform_strawberryfield\EventSubscriber\WebformStrawberryfieldDeleteTmpStorage
       return;

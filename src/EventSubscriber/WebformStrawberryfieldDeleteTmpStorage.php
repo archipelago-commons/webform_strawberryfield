@@ -14,7 +14,7 @@ use Drupal\Core\TempStore\PrivateTempStoreFactory;
 /**
  * Event subscriber that deletes Webform temp storage for SBF bearing entities.
  *
- * The actual deletion only happens after persistance of a Node.
+ * The actual deletion only happens after persistence of a Node.
  *
  */
 class WebformStrawberryfieldDeleteTmpStorage implements EventSubscriberInterface {
@@ -45,6 +45,11 @@ class WebformStrawberryfieldDeleteTmpStorage implements EventSubscriberInterface
    * @var \Drupal\Core\TempStore\PrivateTempStoreFactory
    */
   protected $tempStoreFactory;
+
+  /**
+   * @var \Drupal\Core\Logger\LoggerChannelFactoryInterface
+   */
+  private LoggerChannelFactoryInterface $loggerFactory;
 
   /**
    * StrawberryfieldEventInsertSubscriberDepositDO constructor.
@@ -112,8 +117,8 @@ class WebformStrawberryfieldDeleteTmpStorage implements EventSubscriberInterface
         $keyid = $this->getTempStoreKeyName($fieldname, $delta, '');
         $tempstore->delete($keyid);
         // Delete also any cached errors and drafts if the autosave session
-        // Generated this ADO. If not (e.g Clone we will have marked that
-        // ADO's UUID as not autosave so we do not delete another ongoing session
+        // Generated this ADO. If not (e.g. Clone we will have marked that
+        // ADO's UUID as not auto saved, so we do not delete another ongoing session
         if ($this->tempStoreFactory->get('archipel_autosave')->get($entity->uuid())) {
           $tempstore->delete($keyid . '-errors');
           $tempstore->delete($keyid . '-draft');

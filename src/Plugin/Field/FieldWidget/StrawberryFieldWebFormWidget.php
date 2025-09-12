@@ -32,8 +32,7 @@ use Drupal\webform\Entity\Webform;
  *   }
  * )
  */
-class StrawberryFieldWebFormWidget extends WidgetBase implements ContainerFactoryPluginInterface
-{
+class StrawberryFieldWebFormWidget extends WidgetBase implements ContainerFactoryPluginInterface {
 
   /**
    * @var \Drupal\Core\Session\AccountProxyInterface

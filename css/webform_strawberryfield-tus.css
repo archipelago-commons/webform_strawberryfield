@@ -1,0 +1,47 @@
+.webform_strawberryfield_tus .tus-status {
+  margin-left:0.5 rem;
+  margin-right:0.5 rem;
+  margin-bottom: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.webform_strawberryfield_tus .tus-progress {
+  background-color: transparent;
+  border: 1px solid lightgray;
+  margin-top: 0.5rem;
+}
+
+
+
+.webform_strawberryfield_tus .tus-bar {
+  height:1.5rem;
+  min-height:1.5rem;
+  max-height: 1.5rem;
+  background-color: cornflowerblue;
+}
+.webform_strawberryfield_tus .tus-btn {
+    background-color: deepskyblue;
+    margin-top:1rem;
+    margin-botton:1rem;
+    width:auto;
+}
+.webform_strawberryfield_tus .tus-btn.form-disabled {
+  background-color: lightgray;
+  margin-top:1rem;
+  margin-botton:1rem;
+  width:auto;
+  pointer-events: none;
+}
+
+
+
+
+.webform_strawberryfield_tus .tus-upload-list {
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+
+
+

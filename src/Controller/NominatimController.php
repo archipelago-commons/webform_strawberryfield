@@ -5,6 +5,7 @@ namespace Drupal\webform_strawberryfield\Controller;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
+use Drupal\Core\Site\Settings;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Drupal\Core\Cache\CacheableMetadata;
@@ -22,6 +23,8 @@ use Drupal\Core\Url;
  * @see https://operations.osmfoundation.org/policies/nominatim/ for usage policies.
  */
 class NominatimController extends ControllerBase implements ContainerInjectionInterface {
+
+  CONST USER_AGENT = "Archipelago Commons Repository/1.x at info@metro.org";
 
   /**
    * The HTTP client.
@@ -61,6 +64,7 @@ class NominatimController extends ControllerBase implements ContainerInjectionIn
    * @return \Symfony\Component\HttpFoundation\JsonResponse
    */
   public function handleRequest(Request $request, $api_type = 'search', $count = 5, string $lang = '') {
+    error_log(var_export($request->headers->all(),TRUE));
     //@TODO pass count to the actual fetchers
     //@TODO maybe refactor into plugins so others can write any other reconciliators
     //@TODO if so, we can query the plugins and show in the webform builder options
@@ -108,8 +112,9 @@ class NominatimController extends ControllerBase implements ContainerInjectionIn
     // The request we are going to do is something like
     // "https://nominatim.openstreetmap.org/search?q=West+87th+Street,NY&limit=5&format=geojson&addressdetails=1";
     $remoteUrl = 'https://nominatim.openstreetmap.org/search';
-
-    $options['headers']=['Accept' => 'application/json', 'Accept-Language' => $lang];
+    $custom_user_agent = Settings::get('webform_strawberryfield.nominatim_user_agent', NULL);
+    $custom_user_agent = $custom_user_agent ?? static::USER_AGENT;
+    $options['headers']=['Accept' => 'application/json', 'Accept-Language' => $lang, 'User-Agent' => $custom_user_agent];
     $options['query'] = [
       'q' => $input,
       'limit' => $count,
@@ -133,8 +138,9 @@ class NominatimController extends ControllerBase implements ContainerInjectionIn
     // The request we are going to do is something like
     // "https://nominatim.openstreetmap.org/reverse?format=geojson&lat=44.50155&lon=11.33989";
     $remoteUrl = 'https://nominatim.openstreetmap.org/reverse';
-
-    $options['headers']=['Accept' => 'application/json', 'Accept-Language' => $lang];
+    $custom_user_agent = Settings::get('webform_strawberryfield.nominatim_user_agent', NULL);
+    $custom_user_agent = $custom_user_agent ?? static::USER_AGENT;
+    $options['headers']=['Accept' => 'application/json', 'Accept-Language' => $lang, 'User-Agent' => $custom_user_agent];
     $options['query'] = [
       'lat' => $lat,
       'lon' => $lon,
@@ -154,9 +160,9 @@ class NominatimController extends ControllerBase implements ContainerInjectionIn
    * @return array|
    */
   protected function processRequest($remoteUrl, $options) {
-    // Add an artificial delay of 1 second to aid in
+    // Add an artificial delay of 2 second to aid in
     // https://operations.osmfoundation.org/policies/nominatim/
-    sleep(1);
+    sleep(2);
     $body = $this->getRemoteJsonData($remoteUrl, $options);
 
     $results = [];
@@ -202,13 +208,13 @@ class NominatimController extends ControllerBase implements ContainerInjectionIn
    * @param $remoteUrl
    * @param $options
    *
-   * @return array|string
+   * @return string
    */
   protected function getRemoteJsonData($remoteUrl, $options) {
     // This is expensive, reason why we process and store in cache
     if (empty($remoteUrl)){
       // No need to alarm. all good. If not URL just return.
-      return [];
+      return "[]";
     }
     if (!UrlHelper::isValid($remoteUrl, $absolute = TRUE)) {
       $this->messenger()->addError(
@@ -219,9 +225,9 @@ class NominatimController extends ControllerBase implements ContainerInjectionIn
           ]
         )
       );
-      return [];
+      return "[]";
     }
-
+    // Set custom user agent so we can tell e.g Nominatim who we are
 
     try {
       $request = $this->httpClient->get($remoteUrl, $options);
@@ -237,7 +243,7 @@ class NominatimController extends ControllerBase implements ContainerInjectionIn
           ]
         )
       );
-      return [];
+      return "[]";
     }
     catch (ServerException $exception) {
       $responseMessage = $exception->getMessage();
@@ -248,7 +254,7 @@ class NominatimController extends ControllerBase implements ContainerInjectionIn
             '@options' => http_build_query($options['query']),
           ]
       );
-      return [];
+      return "[]";
     }
     $body = $request->getBody()->getContents();
     return $body;

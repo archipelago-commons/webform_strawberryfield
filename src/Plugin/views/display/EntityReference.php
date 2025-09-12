@@ -54,6 +54,8 @@ class EntityReference extends DisplayPluginBase {
    */
   protected $usesAttachments = FALSE;
 
+  private string $id_field_alias;
+
   /**
    * Constructs a new EntityReference object.
    *
@@ -157,7 +159,7 @@ class EntityReference extends DisplayPluginBase {
     $id_field = $this->view->storage->get('base_field');
     $id_table = $this->view->storage->get('base_table');
 
-    // This is weird. Since this extends DisplayPluginBase and viewsexecutable
+    // This is weird. Since this extends DisplayPluginBase and views executable
     // Assumes that the $query is of a base type instead extending an interface
     // The Dev IDE gets can not access the real properties we have at hand
     // For this specific type of query. So this helps.

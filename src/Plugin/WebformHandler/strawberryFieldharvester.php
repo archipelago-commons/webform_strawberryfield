@@ -11,6 +11,7 @@ use Drupal\webform\Plugin\WebformHandlerBase;
 use Drupal\webform\WebformInterface;
 use Drupal\webform\WebformSubmissionInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\webform_options_limit\Plugin\WebformOptionsLimitHandlerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\strawberryfield\Tools\Ocfl\OcflHelper;
 use Drupal\webform\Element\WebformOtherBase;
@@ -116,8 +117,8 @@ class strawberryFieldharvester extends WebformHandlerBase {
   public static function create(
     ContainerInterface $container,
     array $configuration,
-    $plugin_id,
-    $plugin_definition
+                       $plugin_id,
+                       $plugin_definition
   ) {
     // Refactor to use parent's $instance instead of our own __constructor
     // Required for Webform 6.x > || Drupal 9.x
@@ -544,9 +545,9 @@ class strawberryFieldharvester extends WebformHandlerBase {
 
       if ($cleanvalues == NULL || json_last_error() !== JSON_ERROR_NONE){
         $this->messenger()->addError($this->t('There was an unfixable error encoding your data to JSON, most likely caused by a wrong UTF8 character: %error',
-        [
-          '%error' => json_last_error_msg(),
-        ]));
+          [
+            '%error' => json_last_error_msg(),
+          ]));
         $this->loggerFactory->get('archipelago')->error(
           'There was an unfixable error while using webform %webformlabel and encoding your data to JSON : %error. Attempted Metadata input was <pre><code>%data</code></pre>',
           [

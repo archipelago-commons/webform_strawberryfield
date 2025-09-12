@@ -29,14 +29,7 @@ class WebformWikiDataAgent extends WebformWikiData {
   public static function getCompositeElements(array $element) {
     $elements = [];
     $class = '\Drupal\webform_strawberryfield\Element\WebformWikiData';
-    $elements['agent'] = [
-    '#type' => 'fieldset',
-    ];
-    $elements['agent'] = [
-      '#type' => 'container',
-      '#title' => 'Name',
-    ];
-    $elements['agent']['name_label'] = [
+    $elements['name_label'] = [
       '#type' => 'textfield',
       '#title' => t('Agent/Person Name'),
       //'#title_display' => 'invisible',
@@ -48,14 +41,14 @@ class WebformWikiDataAgent extends WebformWikiData {
       ],
 
     ];
-    $elements['agent']['name_uri'] = [
+    $elements['name_uri'] = [
       '#type' => 'url',
       '#title' => t('Agent/Person URL'),
       //'#title_display' => 'invisible',
       '#attributes' => ['data-strawberry-autocomplete-value' => TRUE]
     ];
 
-    $elements['agent']['role_label'] = [
+    $elements['role_label'] = [
       '#type' => 'textfield',
       '#title' => t('Role'),
       //'#title_display' => 'invisible',
@@ -67,14 +60,14 @@ class WebformWikiDataAgent extends WebformWikiData {
       ],
 
     ];
-    $elements['agent']['role_uri'] = [
+    $elements['role_uri'] = [
       '#type' => 'url',
       '#title' => t('Role URL'),
       //'#title_display' => 'invisible',
       '#attributes' => ['data-strawberry-autocomplete-value' => TRUE]
     ];
-    $elements['agent']['name_label']['#process'][] =  [$class, 'processAutocomplete'];
-    $elements['agent']['role_label']['#process'][] =  [$class, 'processAutocomplete'];
+    $elements['name_label']['#process'][] =  [$class, 'processAutocomplete'];
+    $elements['role_label']['#process'][] =  [$class, 'processAutocomplete'];
     return $elements;
   }
 }

@@ -100,7 +100,8 @@ class WebformMetadataDate extends FormElement {
     if (isset($element['#default_value']) && !empty($element['#default_value'])) {
       if (is_array($element['#default_value'])) {
         // This is the default. When stored value is present
-        $type = isset($element['#default_value']['date_type']) ? $element['#default_value']['date_type'] : $type;
+        $type = $element['#default_value']['date_type'] ?? $type;
+        $type = trim($type);
         $date_from_value = isset($element['#default_value']['date_from']) ? $element['#default_value']['date_from'] : $date_from_value;
         $date_to_value = isset($element['#default_value']['date_to']) ? $element['#default_value']['date_to'] : $date_to_value;
         $date_free_value = isset($element['#default_value']['date_free']) ? $element['#default_value']['date_free'] : $date_free_value;
@@ -134,27 +135,55 @@ class WebformMetadataDate extends FormElement {
             $date_free_value = $element['#default_value'];
           }
         }
+        if ($type == 'date_edtf') {
+            $date_free_value = $element['#default_value'];
+        }
       }
     }
 
+
+    $date_types = [
+      'date_point' => 'Point Date',
+      'date_range' => 'Date Range',
+      'date_free' => 'Freeform Date',
+      'date_edtf' => 'Date EDTF',
+    ];
+    if (!in_array($type, array_keys($date_types))) {
+      $type = 'date_free';
+    }
     if(!empty($element['#edtf_validateme'])) {
-      $date_free_msg = t('EDTF formatted date');
+      unset($date_types['date_free']);
+      if ($type =='date_free') {
+        $type ='date_edtf';
+      }
+    }
+    if(!empty($element['#edtf_only'])) {
+      $date_types = [
+        'date_edtf' => 'Date EDTF',
+      ];
+    }
+
+    if(!empty($element['#edtf_validateme']) || $type == 'date_edtf') {
+      $date_free_msg = t('See the <a href="https://www.loc.gov/standards/datetime/" target="_blank">LoC EDTF Specification </a> for formatting requirements.');
       $date_free_title = t('EDTF date');
     }
     else {
       $date_free_msg = t('Free form date (e.g Circa Summer of 1977)');
       $date_free_title = t('Free form date');
     }
+
+    /* if ($type == 'date_edtf') {
+      $date_types = [
+        'date_edtf' => 'Date EDTF',
+      ];
+    } */
+
     // The date formatting/options
     $element['date_type'] = [
       '#type' => 'radios',
       '#title' => '',
-      '#default_value' => $type,
-      '#options' => [
-        'date_point' => t('Date'),
-        'date_range' => t('Date Range'),
-        'date_free' => $date_free_msg,
-      ]
+      '#default_value' => trim($type),
+      '#options' => $date_types
     ];
     /* Just and idea? Since we need modal labels.
     // We may make the labels simply HTML and then deal with them via JS?
@@ -263,6 +292,7 @@ class WebformMetadataDate extends FormElement {
     $element['date_to']['#attributes']['type'] = 'date';
 
     $element['date_free']['#title'] = $date_free_title;
+    $element['date_free']['#description'] = $date_free_msg;
     $element['date_free']['#attributes']['class'][] = 'webform-date-free';
     $element['date_free']['#default_value'] = $date_free_value;
     $element['date_free']['#type'] = 'textfield';
@@ -274,16 +304,20 @@ class WebformMetadataDate extends FormElement {
         [':input[name="' . $name_prefix . '[date_type]"]' => ['value' => 'date_point']],
         'or',
         [':input[name="' . $name_prefix . '[date_type]"]' => ['value' => 'date_free']],
+        'or',
+        [':input[name="' . $name_prefix . '[date_type]"]' => ['value' => 'date_edtf']],
       ]
     ];
 
     $element['date_from']['#states'] = [
       'invisible' => [
-        ':input[name="' . $name_prefix . '[date_type]"]' => ['value' => 'date_free'],
+        [':input[name="' . $name_prefix . '[date_type]"]' => ['value' => 'date_free']],
+        'or',
+        [':input[name="' . $name_prefix . '[date_type]"]' => ['value' => 'date_edtf']],
       ],
     ];
 
-    if (!isset($element['#showfreeformalways']) || (isset($element['#showfreeformalways']) && $element['#showfreeformalways'] == FALSE )) {
+    if (!isset($element['#showfreeformalways']) || (isset($element['#showfreeformalways']) && $element['#showfreeformalways'] == FALSE ) || $type == 'date_edtf') {
       $element['date_free']['#states'] = [
         'invisible' => [
           [':input[name="' . $name_prefix . '[date_type]"]' => ['value' => 'date_point']],
@@ -354,12 +388,17 @@ class WebformMetadataDate extends FormElement {
       if (!empty($element['#value'])) {
         $value = $form_state->getValue($element['#parents'], []);
         $filtered_value = array_filter($value);
+
         // Empty elements here will carry at least the date_type making them
         // not empty. So deal with that by unsetting the value completely in
         // that case.
         if (count($filtered_value) == 1 && isset($filtered_value['date_type'])) {
           $element['#value'] = [];
         } else {
+          if (in_array($value['date_type'], ['date_edtf', 'date_free'])) {
+            unset($value['date_from']);
+            unset($value['date_to']);
+          }
           $element['#value'] = $value;
         }
         $form_state->setValueForElement($element, $element['#value']);
@@ -367,7 +406,7 @@ class WebformMetadataDate extends FormElement {
     }
 
     // Perform edtf validation on freeform date if so configured.
-    if(!empty($metadatadate_element['#edtf_validateme']) && !empty($element['#value']['date_free'])) {
+    if((!empty($metadatadate_element['#edtf_validateme']) || ($element['#value']['date_type'] == 'date_edtf')) && !empty($element['#value']['date_free'])) {
       $validator = EdtfFactory::newValidator();
       if (!$validator->isValidEdtf($element['#value']['date_free'])) {
         $form_state->setError($element['date_free'],
