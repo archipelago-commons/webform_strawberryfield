@@ -46,12 +46,13 @@ class WebformStrawberryFieldManagedFile extends ManagedFile {
       $default_fids = $element['#default_value'] ?? [];
     }
     $fids_kept_no_access = [];
+    $fids_with_access = $fids;
 
     // Process any input and save new uploads.
     // Super important. Here you will get the list of
-    // Left over files after a deletion.. not the actual requested to be deleted
+    // Left over files after a deletion... not the actual requested to be deleted
     // Even if we have access to file_NUMBER['selected'] == 1 or null to check if the user
-    // decided to delete... but nor core not us will use that?
+    // decided to delete... but nor core nor us will use that?
     if ($input !== FALSE) {
       $input['fids'] = $fids;
       $return = $input;
@@ -79,9 +80,9 @@ class WebformStrawberryFieldManagedFile extends ManagedFile {
         // Load remaining files if the FIDs have changed to confirm they exist.
         // Here is where our implementation needs to differ from
         // \Drupal\file\Element\ManagedFile::valueCallback
-        // Restoring all defaults if a passed $input list (holds still files, e.g
+        // Restoring all defaults if a passed $input list holds still files, e.g.
         // after a request to remove from a field (which is the difference OF default and the passed)
-        // Makes no sense. Also the fact you can remove ALL by sending and empty
+        // Makes no sense. Also, the fact you can remove ALL by sending and empty
         // Input DEFEATS the purpose of the access checks... only works in the "default" is actually/originally
         // empty ... mmmm.
         $fids_with_access = $fids;
@@ -107,7 +108,6 @@ class WebformStrawberryFieldManagedFile extends ManagedFile {
                 if ($file->getOwnerId() != \Drupal::currentUser()->id()) {
                   $force_clean_defaults = TRUE;
                   $fids_kept_no_access[] = $file->id();
-                  continue;
                 }
                 // Since file ownership can't be determined for anonymous users,
                 // they are not allowed to reuse temporary files at all. But
@@ -120,14 +120,12 @@ class WebformStrawberryFieldManagedFile extends ManagedFile {
                   if ($token === NULL || !hash_equals($file_hmac, $token)) {
                     $fids_kept_no_access[] = $file->id();
                     $force_clean_defaults = TRUE;
-                    continue;
                   }
                 }
               }
             }
           }
           if ($force_clean_defaults) {
-            // Now $fids_with_access contains all the Files i am keeping i have actually have access to?
             $fids_with_access = array_diff($fids,$fids_kept_no_access);
           }
         }
@@ -143,7 +141,7 @@ class WebformStrawberryFieldManagedFile extends ManagedFile {
       // Remove from the defaults the difference only if we detected a change in the input?
       // So no $input === FALSE
       if (!empty($default_fids)) {
-        // This covers the use case of just keeping the Files if they exits
+        // This covers the use case of just keeping the Files if they exist
         // But no changes are requested. I don't like it, but it is core
         // And might make sense if in our CASE an ADO user is not touching
         // The existing (even no access) Files setup by a previous user
@@ -158,13 +156,12 @@ class WebformStrawberryFieldManagedFile extends ManagedFile {
       }
     }
     elseif ($force_clean_defaults) {
-      $return = ['fids' => []];
       $fids = $fids_with_access ?? [];
       if (!empty($default_fids)) {
         $pre_existing_fids_not_passed = array_diff($default_fids, $fids_with_access);
         foreach ($pre_existing_fids_not_passed as $fid_to_check) {
           // Only keep the ones we don't have access. I know it reads strange
-          // But we should not be able, via a webform element to change what was set by a previous/authorized user
+          // But we should not be able, via a Webform element to change what was set by a previous/authorized user
           if ($file = File::load($fid_to_check)) {
             if ($file->access('download', \Drupal::currentUser(), TRUE)->isForbidden()) {
               // restore the Explicitly forbidden one. No temporary/strangeness allowed to persist though
