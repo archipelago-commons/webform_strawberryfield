@@ -64,7 +64,6 @@ class NominatimController extends ControllerBase implements ContainerInjectionIn
    * @return \Symfony\Component\HttpFoundation\JsonResponse
    */
   public function handleRequest(Request $request, $api_type = 'search', $count = 5, string $lang = '') {
-    error_log(var_export($request->headers->all(),TRUE));
     //@TODO pass count to the actual fetchers
     //@TODO maybe refactor into plugins so others can write any other reconciliators
     //@TODO if so, we can query the plugins and show in the webform builder options
