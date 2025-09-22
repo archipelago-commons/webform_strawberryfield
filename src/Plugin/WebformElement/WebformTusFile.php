@@ -54,7 +54,7 @@ class WebformTusFile extends WebformManagedFileBase {
     // Track if this element has been processed because the work-around below
     // for 'Issue #2705471: Webform states File fields' which nests the
     // 'managed_file' element in a basic container, which triggers this element
-    // to processed a second time.
+    // to be processed a second time.
     if (!empty($element['#webform_managed_file_processed'])) {
       return;
     }
@@ -197,7 +197,9 @@ class WebformTusFile extends WebformManagedFileBase {
     $element['#attached']['drupalSettings']['webform_strawberryfield']['tus'][$element['#webform_key']]['url'] =  $url->toString();
     $element['#attached']['drupalSettings']['webform_strawberryfield']['tus'][$element['#webform_key']]['X-CSRF-Token'] = $token;
     $element['#attached']['drupalSettings']['webform_strawberryfield']['tus'][$element['#webform_key']]['chunksize'] = $element['#chunksize'] ?? 0;
-    $element['#attached']['drupalSettings']['webform_strawberryfield']['tus'][$element['#webform_key']]['file_limit'] = $element['#multiple'] ?? 0;
+    // Not multiple means at least one? Also, unlimited means == true, we are handling that undirectly (and it works) in the JS but might be good
+    // to be super explicit.
+    $element['#attached']['drupalSettings']['webform_strawberryfield']['tus'][$element['#webform_key']]['file_limit'] = $element['#multiple'] ?? 1;
 
 
 

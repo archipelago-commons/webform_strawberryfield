@@ -64,7 +64,12 @@
                 if (drupalSettings.webform_strawberryfield.tus[webformkey].hasOwnProperty("file_limit")) {
                   filelimit = drupalSettings.webform_strawberryfield.tus[webformkey]["file_limit"];
                   if (!isNaN(filelimit)) {
-                    const existing_file_count = hidden_input_for_files.value.split(' ').length;
+                    // hidden_input_for_files.value will be "" if no file. But split lenght will take that as one
+                    const existing_file_any = hidden_input_for_files.value;
+                    let existing_file_count = 0;
+                    if (existing_file_any !== "") {
+                       existing_file_count = existing_file_any.split(' ').length;
+                    }
                     if (existing_file_count >= Number.parseInt(filelimit)) {
                       // This is only visual, the File Validators already block any extra files to be uploaded
                       toggleBtn.classList.toggle('form-disabled');
