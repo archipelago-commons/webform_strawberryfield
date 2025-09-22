@@ -59,6 +59,7 @@
                 const parallelCountConfig= 1;
                 const url_string = drupalSettings.webform_strawberryfield.tus[webformkey].url.split('?')[0];
                 const token = drupalSettings.webform_strawberryfield.tus[webformkey]["X-CSRF-Token"];
+                const valid_extensions = drupalSettings.webform_strawberryfield.tus[webformkey]["X-TUS-Extensions"];
                 let chunkSize = drupalSettings.webform_strawberryfield.tus[webformkey]["chunksize"];
                 let filelimit = 0;
                 if (drupalSettings.webform_strawberryfield.tus[webformkey].hasOwnProperty("file_limit")) {
@@ -84,7 +85,11 @@
                 }
 
                 const endpoint = url_string;
-                const token_headers = {"X-CSRF-Token": token }
+                const token_headers = {
+                  "X-CSRF-Token": token,
+                  "X-TUS-Extensions": valid_extensions
+                }
+
                 // Reset really makes not much sense since this whole thing will
                 // be reloaded via ajax, but if that takes time it gives the user
                 // A little bit of feedback
@@ -181,14 +186,20 @@
                     },
                     onSuccess(payload) {
                       const { lastResponse } = payload
-                      const span = document.createElement('span');
-                      span.textContent = `File ${upload.file.name} (${upload.file.size} bytes) uploaded. Validating Checksum and final persistence.`;
-                      uploadList.appendChild(span);
+                      let existing_info_element = $managed_file_wrapper.querySelector('.tus-upload-list > span.tus-info')
+                      if (!existing_info_element) {
+                        existing_info_element = document.createElement('span');
+                        existing_info_element.className = 'tus-info';
+                        uploadList.appendChild(existing_info_element);
+                      }
+                      existing_info_element.textContent = `File ${upload.file.name} (${upload.file.size} bytes) uploaded. Validating Checksum and final persistence.`;
+
                       const endpoint_complete = upload.url.replace('/tus_upload/','/tus_upload_complete/');
                       var xhr = new XMLHttpRequest();
                       xhr.withCredentials = false;
                       xhr.open('POST', endpoint_complete, true);
                       xhr.setRequestHeader('X-CSRF-Token', token);
+                      xhr.setRequestHeader('X-TUS-Extensions', valid_extensions);
                       xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
                       xhr.timeout = 8000; // time in milliseconds
                       try {
@@ -236,6 +247,7 @@
                               else {
                                 if (window.alert(`Server could not find your File, might be busy or out of space. Please try again.`)) {
                                   toggleBtn.disabled = false;
+                                  existing_info_element.textContent =  Drupal.t("Processing of Uploaded File failed.");
                                   toggleBtn.textContent = Drupal.t('Pause upload');
                                   reset();
                                 }
@@ -251,7 +263,8 @@
                               progressBar.innerHTML = '';
                             }
                             else {
-                              window.alert('Server had an issue processing the file. the error code is ' + xhr.status  + '.Please try again and/or report this to your Admin');
+                              window.alert('Server had an issue processing the file. the error code is ' + xhr.status  + ' with message' + xhr.statusText +'.Please try again and/or report this to your Admin');
+                              existing_info_element.textContent =  Drupal.t("Processing of Uploaded File failed.");
                               $(input).data('webform-auto-file-upload', false);
                               let fileUploads = ($form.data('webform-auto-file-uploads') || 0);
                               $form.data('webform-auto-file-uploads', fileUploads - 1);
@@ -261,7 +274,8 @@
                         };
                         xhr.onerror = (e) => {
                           console.error(xhr.statusText);
-                          window.alert('Server had an issue processing the file. the error code is ' + xhr.status  + '.Please try again and/or report this to your Admin');
+                          window.alert('Server had an issue processing the file. the error code is ' + xhr.status  + ' with message' + xhr.statusText +' .Please correct if possible, try again and/or report this to your Admin');
+                          existing_info_element.textContent =  Drupal.t("Processing of Uploaded File failed.");
                           $(input).data('webform-auto-file-upload', false);
                           let fileUploads = ($form.data('webform-auto-file-uploads') || 0);
                           $form.data('webform-auto-file-uploads', fileUploads - 1);
@@ -274,6 +288,7 @@
                       }
                       catch (e) {
                         window.alert('Server had an issue processing the file. the error is: ' + e.toString()  + '.Please try again and/or report this to your Admin');
+                        existing_info_element.textContent =  Drupal.t("Processing of Uploaded File failed.");
                         $(input).data('webform-auto-file-upload', false);
                         let fileUploads = ($form.data('webform-auto-file-uploads') || 0);
                         $form.data('webform-auto-file-uploads', fileUploads - 1);
