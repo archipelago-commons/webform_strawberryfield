@@ -134,10 +134,10 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
     $uuid = $uuid ?? $request->headers->get('upload-key') ?? '';
     $server = $this->tusServerService->getServer($current_path, $uuid, $meta_values);
 
-		if (strtolower($server->getRequest()->method()) === 'post') {
+    if (strtolower($server->getRequest()->method()) === 'post') {
       // Post is called on creation.
-			$uuid = $server->getUploadKey();
-		}
+      $uuid = $server->getUploadKey();
+    }
 
 
     // Each webform might have a different upload destination/key based on their settings
@@ -170,7 +170,7 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
             ->getAccountName() . '/tus/' . $key .'/'. $uuid;
         //  If we use a custom element we can set this directly $upload_location = $element['#upload_location'];
         $this->fileSystem->prepareDirectory($upload_location, FileSystemInterface::CREATE_DIRECTORY | FileSystemInterface::MODIFY_PERMISSIONS);
-				$max_size = $element['#max_filesize_tus'] ?? $max_size;
+        $max_size = $element['#max_filesize_tus'] ?? $max_size;
       }
     }
     return [$upload_location, $max_size];
@@ -218,35 +218,39 @@ class TusServerController extends ControllerBase implements ContainerInjectionIn
   public function uploadToWebformComplete(Request $request, WebformInterface $webform, string $key): Response {
     $response = [];
     $post_data = $this->serializer->decode($request->getContent(), $this->getRequestFormat($request));
-		if (($post_data['fileName'] ?? NULL) && ($request->get('uuid') ?? NULL)) {
-			// Not sure what to do with the $request->get('uuid') yet?
-			// Maybe use it If the first query call fails?
-			[$upload_location, $max_size] = $this->getUploadLocation($webform, $key, $request->get('uuid'));
-			$file_storage = $this->entityTypeManager()->getStorage('file');
-			/* @var $existing \Drupal\file\Entity\File[] */
-			$existing = $file_storage->loadByProperties(["uri" => $upload_location . '/' . $post_data['fileName']]);
+    if (($post_data['fileName'] ?? NULL) && ($request->get('uuid') ?? NULL)) {
+      // Not sure what to do with the $request->get('uuid') yet?
+      // Maybe use it If the first query call fails?
+      [$upload_location, $max_size] = $this->getUploadLocation($webform, $key, $request->get('uuid'));
+      // The file URI might exceed the Drupal limits and might have been modified by The Upload Event subscriber
+      // So we do we will use the same op
+      $file_path =  $upload_location . '/' . $post_data['fileName'];
+      $clean_file_path = \Drupal\webform_strawberryfield\WebformStrawberryTusServerService::sanitizeURI($file_path);
+      $file_storage = $this->entityTypeManager()->getStorage('file');
+      /* @var $existing \Drupal\file\Entity\File[] */
+      $existing = $file_storage->loadByProperties(["uri" => $clean_file_path]);
 
-			if ($existing) {
-				$file = reset($existing);
-			}
-			else {
-				throw new NotFoundHttpException("We could not find your File on the backend. Please try again or contact your Admin, you might be running out of space.");
-			}
+      if ($existing) {
+        $file = reset($existing);
+      }
+      else {
+        throw new NotFoundHttpException("We could not find your File on the backend. Please try again or contact your Admin, you might be running out of space.");
+      }
 
-			$response['fid'] = $file->id();
-			$jsonResponse = new CacheableJsonResponse();
-			$jsonResponse->setMaxAge(10);
-			$jsonResponse->setData($response);
+      $response['fid'] = $file->id();
+      $jsonResponse = new CacheableJsonResponse();
+      $jsonResponse->setMaxAge(10);
+      $jsonResponse->setData($response);
       // And we delete here
       $client = new \TusPhp\Tus\Client($request->getPathInfo());
       $client->setKey($request->get('uuid'));
       // Effectively purges the progress Cache, if any lingering.
       $client->getCache()->delete($request->get('uuid'));
-			return $jsonResponse;
-		}
-  	else {
-			throw new NotAcceptableHttpException("Missing arguments. Filename and UUID.");
-		}
+      return $jsonResponse;
+    }
+    else {
+      throw new NotAcceptableHttpException("Missing arguments. Filename and UUID.");
+    }
   }
 }
 
